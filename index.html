@@ -46,7 +46,7 @@
                 <div>
                     <h1 class="font-bold text-lg leading-tight flex items-center gap-2">
                         ポケカ額装背景拡張 スタジオ
-                        <span class="text-[10px] bg-amber-500/20 text-amber-300 font-normal px-2 py-0.5 rounded-full border border-amber-500/30">v1.1 API Key対応</span>
+                        <span class="text-[10px] bg-emerald-500/20 text-emerald-300 font-normal px-2 py-0.5 rounded-full border border-emerald-500/30">v1.2 Pollinations.ai対応</span>
                         <span class="text-[10px] bg-indigo-500/20 text-indigo-300 font-normal px-2 py-0.5 rounded-full border border-indigo-500/30">L2横 2枚パノラマ</span>
                     </h1>
                     <p class="text-xs text-slate-400">文字・枠線を物理カットしてAI拡張。2枚の異なる絵師の世界観をシームレスに結合</p>
@@ -411,21 +411,21 @@
 
                         <div>
                             <label class="text-[11px] font-semibold text-amber-300 block mb-1 flex items-center gap-1">
-                                <i class="fa-solid fa-microchip"></i> 使用モデル
+                                <i class="fa-solid fa-microchip"></i> 画像生成AI <span class="text-[9px] text-emerald-400 font-normal ml-1">（Pollinations.ai / APIキー不要）</span>
                             </label>
                             <select id="ai-model-select" class="w-full bg-slate-950 border border-amber-500/40 rounded-lg p-2 text-xs text-amber-200 font-medium">
-                                <option value="gemini-3.1-flash-image" selected>【Nano Banana Flash】（gemini-3.1-flash-image）- 超高精度 [推奨]</option>
-                                <option value="gemini-3.1-flash-lite-image">【Nano Banana Lite】（gemini-3.1-flash-lite-image）- 高速モデル</option>
+                                <option value="flux" selected>【Flux】高品質モデル [推奨]</option>
+                                <option value="turbo">【Turbo】高速モデル</option>
                             </select>
                         </div>
 
-                        <button id="generate-ai-btn" onclick="generateAIBackgrounds()" class="w-full py-3 bg-gradient-to-r from-amber-500 via-indigo-600 to-purple-600 hover:from-amber-400 hover:via-indigo-500 hover:to-purple-500 font-bold text-xs text-white rounded-xl shadow-lg transition flex items-center justify-center gap-2 cursor-pointer">
-                            <i class="fa-solid fa-wand-magic-sparkles text-sm"></i> AIで背景イラストを3案自動生成する (Nano Banana)
+                        <button id="generate-ai-btn" onclick="generateAIBackgrounds()" class="w-full py-3 bg-gradient-to-r from-emerald-500 via-indigo-600 to-purple-600 hover:from-emerald-400 hover:via-indigo-500 hover:to-purple-500 font-bold text-xs text-white rounded-xl shadow-lg transition flex items-center justify-center gap-2 cursor-pointer">
+                            <i class="fa-solid fa-wand-magic-sparkles text-sm"></i> AIで背景イラストを3案自動生成する (Pollinations.ai)
                         </button>
 
                         <div id="ai-loading" class="hidden p-3 bg-slate-950 rounded-xl border border-indigo-900/60 text-center space-y-1.5">
                             <div class="inline-block animate-spin text-amber-400 text-lg"><i class="fa-solid fa-circle-notch"></i></div>
-                            <p id="ai-loading-text" class="text-xs text-indigo-200 font-medium">Nano Bananaで生成中... (0/3)</p>
+                            <p id="ai-loading-text" class="text-xs text-indigo-200 font-medium">Pollinations.aiで生成中... (0/3)</p>
                             <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
                                 <div id="ai-progress-bar" class="bg-gradient-to-r from-amber-400 to-indigo-500 h-full w-0 transition-all duration-300"></div>
                             </div>
@@ -1358,7 +1358,7 @@ Your task is to seamlessly outpaint both artworks into a breathtaking, unified 3
             modal.classList.remove('flex');
         }
 
-        // Nano Banana による自動生成
+        // Pollinations.ai による自動生成
         async function generateAIBackgrounds() {
             if (appMode === 'single' && !cardImage1) {
                 alert('先にカード画像を読み込んでください。');
@@ -1370,7 +1370,7 @@ Your task is to seamlessly outpaint both artworks into a breathtaking, unified 3
             }
 
             const selectedModel = document.getElementById('ai-model-select').value;
-            const modelLabel = selectedModel === 'gemini-3.1-flash-image' ? 'Nano Banana Flash' : 'Nano Banana Lite';
+            const modelLabel = selectedModel === 'flux' ? 'Flux' : 'Turbo';
 
             const genBtn = document.getElementById('generate-ai-btn');
             const loadingBox = document.getElementById('ai-loading');
@@ -1386,63 +1386,52 @@ Your task is to seamlessly outpaint both artworks into a breathtaking, unified 3
             candidatesGrid.innerHTML = '';
             progressBar.style.width = '0%';
 
-            // ガイド線を隠してベース画像を抽出
-            const showGuide = document.getElementById('show-cut-guide').checked;
-            document.getElementById('show-cut-guide').checked = false;
-            updatePrepCanvas();
-
-            const base64Data = prepCanvas.toDataURL('image/jpeg', 0.9).split(',')[1];
-
-            document.getElementById('show-cut-guide').checked = showGuide;
-            updatePrepCanvas();
-
             const promptText = document.getElementById('generated-prompt').innerText;
-            const apiKey = getGeminiApiKey();
-            if (!apiKey) {
-                alert('Gemini APIキーが設定されていません。\n「Gemini APIキー」入力欄にAPIキーを設定してください。\n（キーはブラウザに安全に保存されます）');
-                focusApiKeyInput();
-                loadingBox.classList.add('hidden');
-                genBtn.disabled = false;
-                genBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-                return;
+
+            // モードに応じた生成サイズ（シングルは2:3ポートレート、デュアルは3:2ランドスケープ）
+            let imgWidth, imgHeight;
+            if (appMode === 'single') {
+                imgWidth = 768;
+                imgHeight = 1152; // 2:3比率
+            } else {
+                imgWidth = 1152;
+                imgHeight = 768;  // 3:2比率
             }
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:generateContent?key=${apiKey}`;
-
-            // モードに応じた生成アスペクト比（シングルは2:3、デュアルは3:2または4:3）
-            const targetAspect = (appMode === 'single') ? "2:3" : "3:2";
-
-            const payload = {
-                contents: [{
-                    role: 'user',
-                    parts: [
-                        { text: promptText },
-                        {
-                            inlineData: {
-                                mimeType: 'image/jpeg',
-                                data: base64Data
-                            }
-                        }
-                    ]
-                }],
-                generationConfig: {
-                    responseModalities: ['IMAGE'],
-                    imageConfig: { aspectRatio: targetAspect }
-                }
-            };
 
             const candidates = [];
             const total = 3;
-            let lastErrorObj = null;
+            let lastErrorMsg = '';
 
             for (let i = 0; i < total; i++) {
-                loadingText.innerText = `${modelLabel}で背景生成中... (${i + 1}/${total})`;
+                loadingText.innerText = `Pollinations.ai (${modelLabel}) で背景生成中... (${i + 1}/${total})`;
                 progressBar.style.width = `${((i) / total) * 100}%`;
 
                 try {
-                    const imgUrl = await fetchImageWithRetry(apiUrl, payload);
-                    candidates.push(imgUrl);
+                    // ランダムseedで多様性を確保
+                    const seed = Math.floor(Math.random() * 999999);
+                    const encodedPrompt = encodeURIComponent(promptText);
+                    const imgUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${imgWidth}&height=${imgHeight}&model=${selectedModel}&seed=${seed}&nologo=true&enhance=true`;
+
+                    // 画像の読み込みを待つ
+                    await new Promise((resolve, reject) => {
+                        const img = new Image();
+                        img.crossOrigin = 'anonymous';
+                        img.onload = () => {
+                            candidates.push(imgUrl);
+                            resolve();
+                        };
+                        img.onerror = () => {
+                            lastErrorMsg = `画像 ${i + 1} の生成/読み込みに失敗しました`;
+                            reject(new Error(lastErrorMsg));
+                        };
+                        // タイムアウト（60秒）
+                        setTimeout(() => {
+                            lastErrorMsg = `画像 ${i + 1} の生成がタイムアウトしました（60秒）`;
+                            reject(new Error(lastErrorMsg));
+                        }, 60000);
+                        img.src = imgUrl;
+                    });
                 } catch (err) {
-                    lastErrorObj = err;
                     console.error(`Candidate ${i+1} failed`, err);
                 }
             }
@@ -1453,8 +1442,7 @@ Your task is to seamlessly outpaint both artworks into a breathtaking, unified 3
             genBtn.classList.remove('opacity-50', 'cursor-not-allowed');
 
             if (candidates.length === 0) {
-                const detailMsg = lastErrorObj ? lastErrorObj.message : 'APIサーバーからの応答がありませんでした';
-                alert(`画像の生成に失敗しました。\n\n【エラー詳細】\n${detailMsg}\n\n※Gemini APIキーが有効か、Google AI Studioの利用枠（Quota）やネットワーク設定をご確認ください。`);
+                alert(`画像の生成に失敗しました。\n\n【エラー詳細】\n${lastErrorMsg || 'Pollinations.aiからの応答がありませんでした'}\n\n※ネットワーク接続を確認してください。`);
                 return;
             }
 
@@ -1465,7 +1453,7 @@ Your task is to seamlessly outpaint both artworks into a breathtaking, unified 3
                 const cardEl = document.createElement('div');
                 cardEl.className = `relative group cursor-pointer border-2 border-slate-700 hover:border-amber-400 rounded-xl overflow-hidden transition shadow-lg ${aspectClass} bg-slate-950 flex flex-col justify-center items-center`;
                 cardEl.innerHTML = `
-                    <img src="${url}" class="w-full h-full object-cover">
+                    <img src="${url}" class="w-full h-full object-cover" crossorigin="anonymous">
                     <span class="absolute top-1.5 left-1.5 bg-slate-900/85 backdrop-blur text-[10px] font-bold text-amber-300 px-2 py-0.5 rounded-md border border-amber-500/30 font-mono shadow">案 ${idx + 1}</span>
                 `;
                 cardEl.onclick = () => selectCandidate(url, cardEl);
@@ -1473,13 +1461,14 @@ Your task is to seamlessly outpaint both artworks into a breathtaking, unified 3
             });
 
             candidatesContainer.classList.remove('hidden');
-            showToast(`${modelLabel}で3案の背景を生成しました！`);
+            showToast(`Pollinations.ai (${modelLabel}) で${candidates.length}案の背景を生成しました！`);
 
             if (candidates.length > 0) {
                 selectCandidate(candidates[0], candidatesGrid.children[0]);
             }
         }
 
+        // Gemini API用リトライ関数（画像生成はPollinations.aiに移行済み。テキストAPI用に残存）
         async function fetchImageWithRetry(apiUrl, payload, retries = 2) {
             let lastErr = '';
             for (let attempt = 0; attempt < retries; attempt++) {
