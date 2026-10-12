@@ -16,6 +16,9 @@
 - [x] 5. 2つの画風融合（Style Morphing）と境界線シームレス連結（エネルギー衝突・共鳴等）パノラマプロンプト自動生成エンジンの実装
 - [x] 6. 2連穴あけ額装マット（くり抜き）＆ 重ね合わせプレビュー機能の実装
 - [x] 7. Nano Banana (gemini-3.1-flash-image) 横長アスペクト比（3:2）生成対応 ＆ 動作確認
+- [x] 8. Gemini APIキー設定UI（LocalStorage永続化・マスク表示・Google AI Studio誘導）の実装
+- [x] 9. APIキー読み込み ＆ エラー詳細（Quota/Key/Network）のハンドリング改善
+- [x] 10. code_artifact.html と index.html の同期、GitHubへの反映・プッシュ
 
 ---
 
