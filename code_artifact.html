@@ -1,0 +1,1494 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ポケカ額装用背景拡張（アウトペインティング）精密サイズスタジオ</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: #0b0f19;
+            color: #f8fafc;
+        }
+        .checkerboard {
+            background-color: #151d30;
+            background-image: linear-gradient(45deg, #0b0f19 25%, transparent 25%), linear-gradient(-45deg, #0b0f19 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #0b0f19 75%), linear-gradient(-45deg, transparent 75%, #0b0f19 75%);
+            background-size: 20px 20px;
+            background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+        }
+        /* カスタムスクロールバー */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+    <!-- ヘッダー -->
+    <header class="bg-slate-900/90 border-b border-slate-800 p-4 sticky top-0 z-50 backdrop-blur-md">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-3">
+            <div class="flex items-center gap-3">
+                <div class="bg-gradient-to-tr from-indigo-600 to-purple-600 p-2.5 rounded-xl text-white shadow-lg shadow-indigo-600/30">
+                    <i class="fa-solid fa-crop-simple text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg leading-tight flex items-center gap-2">
+                        ポケカ額装背景拡張 スタジオ
+                        <span class="text-[10px] bg-amber-500/20 text-amber-300 font-normal px-2 py-0.5 rounded-full border border-amber-500/30">L2横 2枚連結パノラマ対応・絵師個別設定</span>
+                    </h1>
+                    <p class="text-xs text-slate-400">文字・枠線を物理カットしてAI拡張。2枚の異なる絵師の世界観をシームレスに結合</p>
+                </div>
+            </div>
+
+            <!-- モード切替 ＆ タブ切替 -->
+            <div class="flex flex-wrap items-center gap-2">
+                <!-- 単体 / 2枚連結モード切替 -->
+                <div class="bg-slate-950 p-1 rounded-xl border border-slate-800 flex gap-1">
+                    <button id="mode-single-btn" onclick="setAppMode('single')" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 text-white transition flex items-center gap-1.5 shadow">
+                        <i class="fa-solid fa-square"></i> 1枚 縦モード
+                    </button>
+                    <button id="mode-dual-btn" onclick="setAppMode('dual')" class="px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-white transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-table-columns"></i> 2枚 パノラマ連結 (L2横)
+                    </button>
+                </div>
+
+                <div class="h-6 w-px bg-slate-800 hidden md:block"></div>
+
+                <!-- ステップタブ切替 -->
+                <div class="flex gap-1.5">
+                    <button id="tab-prep-btn" onclick="switchTab('prep')" class="px-3.5 py-1.5 text-xs font-medium rounded-lg bg-indigo-600 text-white transition shadow">
+                        1. ベース作成・プロンプト
+                    </button>
+                    <button id="tab-prev-btn" onclick="switchTab('preview')" class="px-3.5 py-1.5 text-xs font-medium rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 transition">
+                        2. 額装穴あけ・重ね合わせ
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- STEP 1: PREPARATION TAB (ベース画像・プロンプト作成) -->
+        <div id="tab-prep" class="lg:col-span-12 grid grid-cols-1 lg:grid-cols-12 gap-6 w-full">
+            <!-- 左側コントロールパネル -->
+            <div class="lg:col-span-5 space-y-5 bg-slate-900/70 p-5 rounded-2xl border border-slate-800 backdrop-blur max-h-[85vh] overflow-y-auto">
+                
+                <!-- 【シングルモード専用】カード1枚読み込み -->
+                <div id="single-card-input-box">
+                    <h2 class="text-md font-semibold text-indigo-400 flex items-center gap-2">
+                        <i class="fa-solid fa-upload"></i> カード画像を読み込む
+                    </h2>
+                    <p class="text-xs text-slate-400 mt-1">撮影したカード画像またはスキャン画像をアップロードしてください。</p>
+                    <label class="mt-2.5 flex flex-col items-center justify-center w-full h-20 border-2 border-dashed border-slate-700 rounded-xl cursor-pointer hover:border-indigo-500 hover:bg-slate-800/50 transition">
+                        <div class="flex flex-col items-center justify-center pt-2 pb-2">
+                            <i class="fa-solid fa-image text-lg text-slate-400 mb-1"></i>
+                            <p class="text-xs text-slate-300">クリックまたはドラッグ＆ドロップ</p>
+                        </div>
+                        <input id="card-input" type="file" accept="image/*" class="hidden" onchange="loadCardImage(event, 1)">
+                    </label>
+                </div>
+
+                <!-- 【デュアルモード専用】2枚カード個別読み込み -->
+                <div id="dual-card-input-box" class="hidden space-y-3">
+                    <div class="flex items-center justify-between">
+                        <h2 class="text-md font-semibold text-indigo-400 flex items-center gap-2">
+                            <i class="fa-solid fa-images"></i> 2枚のカードを読み込む
+                        </h2>
+                        <span class="text-[10px] bg-indigo-950 text-indigo-300 px-2 py-0.5 rounded border border-indigo-800">例: ミュウ × ミュウツー</span>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <!-- カード1 (左) -->
+                        <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs font-bold text-amber-300 flex items-center gap-1">
+                                    <i class="fa-solid fa-arrow-left"></i> 左カード (Card 1)
+                                </span>
+                                <span id="card1-status" class="text-[10px] text-slate-500">未選択</span>
+                            </div>
+                            <label class="flex flex-col items-center justify-center w-full h-16 border-2 border-dashed border-slate-700 rounded-lg cursor-pointer hover:border-amber-400 transition">
+                                <i class="fa-solid fa-image text-sm text-slate-400 mb-0.5"></i>
+                                <span class="text-[11px] text-slate-300">左カード選択</span>
+                                <input id="card1-input" type="file" accept="image/*" class="hidden" onchange="loadCardImage(event, 1)">
+                            </label>
+                        </div>
+
+                        <!-- カード2 (右) -->
+                        <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs font-bold text-purple-300 flex items-center gap-1">
+                                    <i class="fa-solid fa-arrow-right"></i> 右カード (Card 2)
+                                </span>
+                                <span id="card2-status" class="text-[10px] text-slate-500">未選択</span>
+                            </div>
+                            <label class="flex flex-col items-center justify-center w-full h-16 border-2 border-dashed border-slate-700 rounded-lg cursor-pointer hover:border-purple-400 transition">
+                                <i class="fa-solid fa-image text-sm text-slate-400 mb-0.5"></i>
+                                <span class="text-[11px] text-slate-300">右カード選択</span>
+                                <input id="card2-input" type="file" accept="image/*" class="hidden" onchange="loadCardImage(event, 2)">
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- クロップ（テキスト・UI切除）設定エリア -->
+                <div class="p-3.5 bg-amber-950/30 border border-amber-500/30 rounded-xl space-y-3">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold text-amber-300 flex items-center gap-1.5">
+                            <i class="fa-solid fa-scissors"></i> 文字・外枠物理カット（ブレ・文字巨大化防止）
+                        </span>
+                        <div class="flex items-center gap-1">
+                            <input id="enable-crop" type="checkbox" checked onchange="updatePrepCanvas()" class="w-4 h-4 accent-amber-500 rounded cursor-pointer">
+                            <label for="enable-crop" class="text-xs text-amber-200 cursor-pointer font-medium">有効</label>
+                        </div>
+                    </div>
+                    <p class="text-[11px] text-amber-200/80 leading-relaxed">
+                        カード上の文字（技名・HP等）や枠線を物理的に削ぎ落とし、AIにイラスト純粋部のみを渡します。
+                    </p>
+
+                    <!-- デュアルモード時の対象カード選択タブ -->
+                    <div id="crop-target-selector" class="hidden flex gap-1 p-1 bg-slate-950 rounded-lg border border-slate-800">
+                        <button id="crop-target-1" onclick="switchCropTarget(1)" class="flex-1 py-1 text-[11px] font-bold rounded bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                            左カード (Card 1)
+                        </button>
+                        <button id="crop-target-2" onclick="switchCropTarget(2)" class="flex-1 py-1 text-[11px] font-medium rounded text-slate-400 hover:text-white">
+                            右カード (Card 2)
+                        </button>
+                    </div>
+                    
+                    <div id="crop-controls" class="space-y-2 pt-1 border-t border-amber-800/40 text-xs">
+                        <div>
+                            <div class="flex justify-between text-[11px] text-slate-300 mb-0.5">
+                                <span>上部カット（カード名・HP領域）</span>
+                                <span id="crop-top-val" class="font-mono text-amber-400">12 %</span>
+                            </div>
+                            <input id="crop-top" type="range" min="0" max="25" value="12" oninput="handleCropInput()" class="w-full accent-amber-500 cursor-pointer">
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-[11px] text-slate-300 mb-0.5">
+                                <span>下部カット（技テキスト・版権領域）</span>
+                                <span id="crop-bottom-val" class="font-mono text-amber-400">18 %</span>
+                            </div>
+                            <input id="crop-bottom" type="range" min="0" max="35" value="18" oninput="handleCropInput()" class="w-full accent-amber-500 cursor-pointer">
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <span class="text-[10px] text-slate-400 block mb-0.5">左フチカット</span>
+                                <input id="crop-left" type="range" min="0" max="15" value="3" oninput="handleCropInput()" class="w-full accent-amber-500 cursor-pointer">
+                            </div>
+                            <div>
+                                <span class="text-[10px] text-slate-400 block mb-0.5">右フチカット</span>
+                                <input id="crop-right" type="range" min="0" max="15" value="3" oninput="handleCropInput()" class="w-full accent-amber-500 cursor-pointer">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 印刷用紙・物理ミリ指定 -->
+                <div class="space-y-3 pt-3 border-t border-slate-800">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-xs font-medium text-slate-200">印刷用紙・物理ミリ指定</h3>
+                        <span class="text-[10px] text-indigo-300 bg-indigo-950 px-2 py-0.5 rounded border border-indigo-800">カード規格: 63×88mm</span>
+                    </div>
+                    
+                    <div>
+                        <select id="paper-preset" onchange="applyPaperPreset()" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-xs text-white focus:outline-none focus:border-indigo-500 font-mono">
+                            <!-- JS側でモードに応じて自動注入 -->
+                        </select>
+                    </div>
+
+                    <div class="p-2.5 bg-indigo-950/50 rounded-xl border border-indigo-800/60 space-y-1.5 text-xs">
+                        <div class="flex justify-between items-center text-indigo-200 font-mono text-[11px]">
+                            <span>用紙寸法: <strong id="paper-dim-display">178 × 127 mm</strong></span>
+                            <span>アスペクト比: <strong id="paper-aspect-display">1.402:1</strong></span>
+                        </div>
+                        <div class="flex justify-between items-center text-amber-300 font-mono pt-1 border-t border-indigo-900/80 text-[11px]">
+                            <span>描画高さ (物理ミリ計算):</span>
+                            <strong id="calc-ratio-display" class="text-xs">69.3 %</strong>
+                        </div>
+                    </div>
+
+                    <!-- デュアルモード専用: カード間隔（ギャップ）ミリ調整 -->
+                    <div id="dual-gap-control" class="hidden p-3 bg-purple-950/30 border border-purple-500/30 rounded-xl space-y-1.5">
+                        <div class="flex justify-between text-xs">
+                            <span class="text-purple-300 font-medium flex items-center gap-1">
+                                <i class="fa-solid fa-arrows-left-right-to-line"></i> 2枚の間隔（マット仕切り幅）
+                            </span>
+                            <span id="card-gap-val" class="text-purple-300 font-mono font-bold">12.0 mm</span>
+                        </div>
+                        <input id="card-gap" type="range" min="4" max="30" step="0.5" value="12" oninput="updatePrepCanvas()" class="w-full accent-purple-500 cursor-pointer">
+                        <div class="flex justify-between text-[10px] text-slate-400">
+                            <span>極細 4mm</span>
+                            <span class="text-amber-400 font-medium">推奨 12mm (左右マージン約20mm)</span>
+                            <span>広め 30mm</span>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between text-xs mb-0.5">
+                            <span class="text-slate-400">イラストの描画高さ（調整）</span>
+                            <span id="size-ratio-val" class="text-indigo-400 font-mono font-bold">69.3 %</span>
+                        </div>
+                        <input id="size-ratio" type="range" min="20" max="90" step="0.1" value="69.3" oninput="updatePrepCanvas()" class="w-full accent-indigo-500 cursor-pointer">
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between text-xs mb-0.5">
+                            <span class="text-slate-400">垂直位置オフセット (Y軸)</span>
+                            <span id="y-offset-val" class="text-indigo-400 font-mono">0 px</span>
+                        </div>
+                        <input id="y-offset" type="range" min="-150" max="150" value="0" oninput="updatePrepCanvas()" class="w-full accent-indigo-500 cursor-pointer">
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <input id="show-cut-guide" type="checkbox" checked onchange="updatePrepCanvas()" class="w-4 h-4 accent-indigo-600 rounded">
+                        <label for="show-cut-guide" class="text-xs text-amber-300 font-medium cursor-pointer">
+                            <i class="fa-solid fa-ruler-combined me-1"></i> カード実物くり抜き穴（埋め込みガイド線）を表示
+                        </label>
+                    </div>
+                </div>
+
+                <!-- 絵師・デザイナー設定エリア -->
+                <div class="pt-3 border-t border-slate-800 space-y-3">
+                    
+                    <!-- 【シングルモード】絵師設定 -->
+                    <div id="single-artist-box" class="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-2">
+                        <div class="flex justify-between items-center">
+                            <span class="text-[11px] font-semibold text-amber-300 flex items-center gap-1">
+                                <i class="fa-solid fa-palette text-amber-400"></i> 絵師の深堀り技法
+                            </span>
+                        </div>
+                        <select id="artist-preset-select" onchange="selectArtistPreset(1)" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs text-white">
+                            <option value="KANDA">【神田晃次 (Shinji Kanda)】 線画極致・サイケデリック和風・コラージュ</option>
+                            <option value="EGAWA">【江川あきら (Akira Egawa)】 ドラマチック光彩・高解像ダイナミック</option>
+                            <option value="KOMIYA">【小宮一浩 (Tomokazu Komiya)】 表現主義・ガッシュタッチ・素朴美</option>
+                            <option value="SAITO">【さいとうなおき (Naoki Saito)】 アニメグラフィック・高輝度リムライト</option>
+                            <option value="SHIBUZOH">【網島志ぶ (Shibuzoh.)】 ポップデザイン・フラットカラー・ファンシー</option>
+                            <option value="CUSTOM">【カスタム自由入力（Gemini 5軸深堀り検索）】</option>
+                        </select>
+                        <div id="custom-artist-box-1" class="hidden flex gap-1.5 pt-1">
+                            <input id="artist-input-1" type="text" placeholder="例: カンダシンジ, Naoki Saito" class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1 text-xs text-white">
+                            <button onclick="fetchArtistStyle(1)" class="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-medium rounded-lg transition flex items-center gap-1 shrink-0">
+                                <i class="fa-solid fa-wand-magic-sparkles"></i> 5軸深堀り
+                            </button>
+                        </div>
+                        <div id="artist-status-1" class="text-[10px] text-slate-400 hidden flex items-center gap-1">
+                            <i class="fa-solid fa-spinner animate-spin text-indigo-400"></i> 絵師技法を深堀り解析中...
+                        </div>
+                    </div>
+
+                    <!-- 【デュアルモード】2枚それぞれのデザイナー設定 ＆ 境界線結合テーマ -->
+                    <div id="dual-artist-box" class="hidden space-y-3">
+                        <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-3">
+                            <div class="flex justify-between items-center">
+                                <span class="text-xs font-bold text-amber-300 flex items-center gap-1">
+                                    <i class="fa-solid fa-paintbrush text-amber-400"></i> 2枚それぞれの絵師・デザイナー設定
+                                </span>
+                            </div>
+
+                            <!-- 左カード 絵師 -->
+                            <div class="space-y-1.5 p-2 bg-slate-900/80 rounded-lg border border-slate-800">
+                                <span class="text-[11px] font-semibold text-amber-300 flex items-center gap-1">
+                                    <i class="fa-solid fa-arrow-left"></i> 左カード（Card 1）の絵師・スタイル
+                                </span>
+                                <select id="artist1-preset-select" onchange="selectArtistPreset(1)" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-xs text-white">
+                                    <option value="KANDA">【神田晃次】 荒々しい線画極致・サイケ和風・コラージュ</option>
+                                    <option value="EGAWA">【江川あきら】 ドラマチック光彩・高解像ダイナミック</option>
+                                    <option value="KOMIYA">【小宮一浩】 表現主義・ガッシュタッチ・素朴美</option>
+                                    <option value="SAITO">【さいとうなおき】 アニメグラフィック・高輝度リムライト</option>
+                                    <option value="SHIBUZOH">【網島志ぶ】 ポップデザイン・フラットカラー・幾何学</option>
+                                    <option value="CUSTOM">【カスタム自由入力（Gemini 5軸深堀り検索）】</option>
+                                </select>
+                                <div id="custom-artist-box-dual-1" class="hidden flex gap-1.5 pt-1">
+                                    <input id="artist-input-dual-1" type="text" placeholder="例: カンダシンジ" class="flex-1 bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white">
+                                    <button onclick="fetchArtistStyle(1, true)" class="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] rounded-lg">5軸検索</button>
+                                </div>
+                            </div>
+
+                            <!-- 右カード 絵師 -->
+                            <div class="space-y-1.5 p-2 bg-slate-900/80 rounded-lg border border-slate-800">
+                                <span class="text-[11px] font-semibold text-purple-300 flex items-center gap-1">
+                                    <i class="fa-solid fa-arrow-right"></i> 右カード（Card 2）の絵師・スタイル
+                                </span>
+                                <select id="artist2-preset-select" onchange="selectArtistPreset(2)" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-xs text-white">
+                                    <option value="EGAWA" selected>【江川あきら】 ドラマチック光彩・高解像ダイナミック</option>
+                                    <option value="KANDA">【神田晃次】 荒々しい線画極致・サイケ和風・コラージュ</option>
+                                    <option value="KOMIYA">【小宮一浩】 表現主義・ガッシュタッチ・素朴美</option>
+                                    <option value="SAITO">【さいとうなおき】 アニメグラフィック・高輝度リムライト</option>
+                                    <option value="SHIBUZOH">【網島志ぶ】 ポップデザイン・フラットカラー・幾何学</option>
+                                    <option value="CUSTOM">【カスタム自由入力（Gemini 5軸深堀り検索）】</option>
+                                </select>
+                                <div id="custom-artist-box-dual-2" class="hidden flex gap-1.5 pt-1">
+                                    <input id="artist-input-dual-2" type="text" placeholder="例: Naoki Saito" class="flex-1 bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white">
+                                    <button onclick="fetchArtistStyle(2, true)" class="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] rounded-lg">5軸検索</button>
+                                </div>
+                            </div>
+
+                            <!-- 境界線・世界観の融合テーマ -->
+                            <div class="space-y-1.5 p-2 bg-slate-900/80 rounded-lg border border-slate-800">
+                                <span class="text-[11px] font-semibold text-emerald-300 flex items-center gap-1">
+                                    <i class="fa-solid fa-link"></i> 中央境界線の融合テーマ（結合演出）
+                                </span>
+                                <select id="dual-relation-select" onchange="updatePrepCanvas()" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-xs text-white">
+                                    <option value="CLASH">【対峙・激突】相反するオーラやエネルギーが中央で激突・爆縮</option>
+                                    <option value="RESONANCE">【共鳴・調和】2つの世界が光の粒子や波紋で美しくシームレスに調和</option>
+                                    <option value="COSMIC">【宇宙・次元歪曲】中央にワームホールや時空の歪みが発生し両世界を架橋</option>
+                                    <option value="YIN_YANG">【明暗・陰陽】左の光と右の闇が中央でドラマチックなグラデーションを形成</option>
+                                    <option value="NATURE_CYBER">【異世界交錯】大自然の緑とサイバー研究所の金属感が境界で融合</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- プロンプト表示エリア -->
+                    <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-1.5">
+                        <div class="flex justify-between items-center">
+                            <span class="text-[10px] font-semibold text-slate-400">自動生成されたアウトペインティング英語プロンプト</span>
+                            <button onclick="copyPrompt()" class="text-[10px] text-indigo-400 hover:text-indigo-300 font-medium flex items-center gap-1">
+                                <i class="fa-regular fa-copy"></i> コピー
+                            </button>
+                        </div>
+                        <p id="generated-prompt" class="text-[10px] text-slate-300 font-mono leading-relaxed line-clamp-5 select-all bg-slate-900 p-2 rounded border border-slate-800">
+                            Loading prompt...
+                        </p>
+                        <details class="text-[10px] text-slate-400">
+                            <summary class="cursor-pointer hover:text-slate-300 font-medium py-0.5">▼ 日本語での深堀り指示内容（対訳の確認）</summary>
+                            <p id="generated-prompt-jp" class="mt-1 p-2 bg-slate-900/50 rounded text-[10px] font-sans text-slate-300 border border-slate-800 whitespace-pre-wrap">
+                                Loading translation...
+                            </p>
+                        </details>
+                    </div>
+
+                    <!-- AI生成 ＆ ダウンロードボタン -->
+                    <div class="space-y-2 pt-1">
+                        <button onclick="downloadPrepImage()" class="w-full py-2.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 font-bold text-xs text-white rounded-xl transition flex items-center justify-center gap-2 cursor-pointer">
+                            <i class="fa-solid fa-download text-sm text-indigo-400"></i> AI入力用ベース画像を保存 / 表示
+                        </button>
+
+                        <div>
+                            <label class="text-[11px] font-semibold text-amber-300 block mb-1 flex items-center gap-1">
+                                <i class="fa-solid fa-microchip"></i> 使用モデル
+                            </label>
+                            <select id="ai-model-select" class="w-full bg-slate-950 border border-amber-500/40 rounded-lg p-2 text-xs text-amber-200 font-medium">
+                                <option value="gemini-3.1-flash-image" selected>【Nano Banana Flash】（gemini-3.1-flash-image）- 超高精度 [推奨]</option>
+                                <option value="gemini-3.1-flash-lite-image">【Nano Banana Lite】（gemini-3.1-flash-lite-image）- 高速モデル</option>
+                            </select>
+                        </div>
+
+                        <button id="generate-ai-btn" onclick="generateAIBackgrounds()" class="w-full py-3 bg-gradient-to-r from-amber-500 via-indigo-600 to-purple-600 hover:from-amber-400 hover:via-indigo-500 hover:to-purple-500 font-bold text-xs text-white rounded-xl shadow-lg transition flex items-center justify-center gap-2 cursor-pointer">
+                            <i class="fa-solid fa-wand-magic-sparkles text-sm"></i> AIで背景イラストを3案自動生成する (Nano Banana)
+                        </button>
+
+                        <div id="ai-loading" class="hidden p-3 bg-slate-950 rounded-xl border border-indigo-900/60 text-center space-y-1.5">
+                            <div class="inline-block animate-spin text-amber-400 text-lg"><i class="fa-solid fa-circle-notch"></i></div>
+                            <p id="ai-loading-text" class="text-xs text-indigo-200 font-medium">Nano Bananaで生成中... (0/3)</p>
+                            <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                                <div id="ai-progress-bar" class="bg-gradient-to-r from-amber-400 to-indigo-500 h-full w-0 transition-all duration-300"></div>
+                            </div>
+                        </div>
+
+                        <div id="ai-candidates-container" class="hidden space-y-2 pt-2 border-t border-slate-800">
+                            <span class="text-[11px] font-semibold text-slate-300 flex items-center justify-between">
+                                <span id="candidates-title"><i class="fa-solid fa-layer-group text-amber-400 me-1"></i> 生成結果（3案）</span>
+                                <span class="text-[10px] text-slate-400 font-normal">タップで選択・自動適用</span>
+                            </span>
+                            <div id="ai-candidates-grid" class="grid grid-cols-3 gap-2.5"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 右側キャンバスプレビュー -->
+            <div class="lg:col-span-7 bg-slate-900/70 p-5 rounded-2xl border border-slate-800 flex flex-col justify-center items-center">
+                <div class="text-center mb-3 flex items-center justify-between w-full px-2">
+                    <span class="text-xs font-semibold text-slate-400" id="canvas-info-text">ベースキャンバス</span>
+                    <span class="text-[11px] text-amber-400 font-mono"><i class="fa-solid fa-shield-halved me-1"></i>文字・UIカット適用済みベース</span>
+                </div>
+                <div class="relative checkerboard rounded-xl p-4 overflow-hidden flex items-center justify-center border border-slate-800 shadow-2xl w-full">
+                    <canvas id="prep-canvas" class="max-h-[540px] max-w-full w-auto rounded-lg shadow-md border border-slate-700/50"></canvas>
+                </div>
+                <p id="canvas-desc-text" class="text-xs text-slate-400 mt-3 text-center leading-relaxed">
+                    中央のカードから文字や枠線がカットされた純粋なイラストだけが配置されています。<br>
+                    <strong class="text-indigo-300">文字や枠線が存在しないため、AIが文字を複製したりブレる事故が根本から発生しません。</strong>
+                </p>
+            </div>
+        </div>
+
+        <!-- STEP 2: OVERLAY PREVIEW TAB (額装穴あけ・重ね合わせ確認) -->
+        <div id="tab-preview" class="lg:col-span-12 grid grid-cols-1 lg:grid-cols-12 gap-6 w-full hidden">
+            <!-- 左側設定 -->
+            <div class="lg:col-span-5 space-y-5 bg-slate-900/70 p-5 rounded-2xl border border-slate-800 backdrop-blur">
+                <div>
+                    <h2 class="text-md font-semibold text-indigo-400 flex items-center gap-2">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i> 生成画像の重ね合わせ・額装穴あけ確認
+                    </h2>
+                    <p class="text-xs text-slate-400 mt-1">AIが作成した背景画像をアップロードし、カード埋め込み穴とのシームレス度を検証します。</p>
+                    <label class="mt-3 flex flex-col items-center justify-center w-full h-20 border-2 border-dashed border-slate-700 rounded-xl cursor-pointer hover:border-indigo-500 hover:bg-slate-800/50 transition">
+                        <div class="flex flex-col items-center justify-center pt-2 pb-2">
+                            <i class="fa-solid fa-image text-lg text-slate-400 mb-1"></i>
+                            <p class="text-xs text-slate-300">AI生成背景画像をアップロード</p>
+                        </div>
+                        <input id="bg-input" type="file" accept="image/*" class="hidden" onchange="loadBgImage(event)">
+                    </label>
+                </div>
+
+                <div class="space-y-4 pt-3 border-t border-slate-800">
+                    <h3 class="text-xs font-medium text-slate-200">表示モード・フィッティング調整</h3>
+
+                    <div class="grid grid-cols-2 gap-2 p-1 bg-slate-950 rounded-lg border border-slate-800">
+                        <button id="mode-embed-btn" onclick="setPreviewMode('embed')" class="py-2 text-xs font-medium rounded-md bg-indigo-600 text-white transition flex items-center justify-center gap-1">
+                            <i class="fa-solid fa-vector-square"></i> 埋め込み穴あけ表示
+                        </button>
+                        <button id="mode-overlay-btn" onclick="setPreviewMode('overlay')" class="py-2 text-xs font-medium rounded-md text-slate-400 hover:bg-slate-800 transition flex items-center justify-center gap-1">
+                            <i class="fa-solid fa-layer-group"></i> カード重ね置き
+                        </button>
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between text-xs mb-1">
+                            <span class="text-slate-400">カード不透明度 (重ね置き時)</span>
+                            <span id="opacity-val" class="text-indigo-400 font-mono">80 %</span>
+                        </div>
+                        <input id="card-opacity" type="range" min="0" max="100" value="80" oninput="updateOverlayCanvas()" class="w-full accent-indigo-500 cursor-pointer">
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <span class="text-[11px] text-slate-400 block mb-1">微調節 X軸</span>
+                            <input id="fit-x" type="range" min="-40" max="40" value="0" oninput="updateOverlayCanvas()" class="w-full accent-indigo-500 cursor-pointer">
+                        </div>
+                        <div>
+                            <span class="text-[11px] text-slate-400 block mb-1">微調節 Y軸</span>
+                            <input id="fit-y" type="range" min="-40" max="40" value="0" oninput="updateOverlayCanvas()" class="w-full accent-indigo-500 cursor-pointer">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="p-3 bg-amber-950/40 border border-amber-800/50 rounded-xl text-xs text-amber-200 leading-relaxed">
+                    <i class="fa-solid fa-print text-amber-400 me-1"></i>
+                    <strong>100%等倍印刷のポイント:</strong><br>
+                    印刷時はプリンターの設定で「用紙に合わせて拡大・縮小」を<strong>オフ</strong>にし、<strong>「100%等倍印刷（またはフチなし印刷）」</strong>を指定してください。
+                </div>
+            </div>
+
+            <!-- 右側重ね合わせプレビュー -->
+            <div class="lg:col-span-7 bg-slate-900/70 p-5 rounded-2xl border border-slate-800 flex flex-col justify-center items-center">
+                <div class="text-center mb-3">
+                    <span class="text-xs font-semibold text-slate-400">額装埋め込みプレビュー</span>
+                </div>
+                <div class="relative checkerboard rounded-xl p-4 overflow-hidden flex items-center justify-center border border-slate-800 shadow-2xl w-full">
+                    <canvas id="overlay-canvas" class="max-h-[540px] max-w-full w-auto rounded-lg shadow-md border border-slate-700/50"></canvas>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- モバイル向け画像保存用モーダル -->
+    <div id="image-modal" class="fixed inset-0 bg-black/90 backdrop-blur-md z-[100] hidden flex-col items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 max-w-md w-full flex flex-col items-center gap-4 relative shadow-2xl max-h-[90vh] overflow-y-auto">
+            <button onclick="closeImageModal()" class="absolute top-3 right-3 text-slate-400 hover:text-white text-lg w-8 h-8 flex items-center justify-center rounded-full bg-slate-800">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <div class="text-center">
+                <h3 class="text-sm font-bold text-amber-300 flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-shield-halved text-amber-400"></i> AI入力用クリーンベース画像
+                </h3>
+                <p class="text-xs text-amber-300 font-medium mt-1.5 bg-amber-950/80 px-3 py-1.5 rounded-lg border border-amber-500/40 inline-block">
+                    📱 スマホの方は下の画像を「長押し」して保存してください
+                </p>
+            </div>
+            
+            <div class="max-h-[50vh] overflow-hidden rounded-xl border-2 border-indigo-500/50 shadow-2xl bg-slate-950 flex items-center justify-center">
+                <img id="modal-img" src="" class="w-full h-auto max-h-[50vh] object-contain block select-all">
+            </div>
+
+            <div class="flex flex-col sm:flex-row gap-2 w-full pt-1">
+                <a id="modal-download-link" download="poke_frame_base.jpg" href="#" class="flex-1 py-3 bg-indigo-600 hover:bg-indigo-500 font-medium text-xs text-white rounded-xl text-center transition flex items-center justify-center gap-1.5 shadow-lg">
+                    <i class="fa-solid fa-file-arrow-down text-sm"></i> PC用ファイル直接保存
+                </a>
+                <button onclick="closeImageModal()" class="px-5 py-3 bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 font-medium rounded-xl transition">
+                    閉じる
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- トースト通知 -->
+    <div id="toast" class="fixed bottom-5 right-5 bg-indigo-600 text-white px-4 py-2.5 rounded-xl shadow-2xl opacity-0 transition-all duration-300 pointer-events-none flex items-center gap-2 text-xs font-medium z-50">
+        <i class="fa-solid fa-circle-check"></i> <span id="toast-msg">通知</span>
+    </div>
+
+    <script>
+        // 用紙サイズ定義（ミリ単位）
+        const PRESETS_SINGLE = {
+            'L2': { name: 'L2判 (縦)', w: 127, h: 178 },
+            'L': { name: 'L判 (縦)', w: 89, h: 127 },
+            'POST': { name: 'ハガキ/KG (縦)', w: 100, h: 148 },
+            '23_STD': { name: '2:3 標準 (縦)', w: 100, h: 150 },
+            'A4': { name: 'A4判 (縦)', w: 210, h: 297 }
+        };
+
+        const PRESETS_DUAL = {
+            'L2_LAND': { name: '【L2判 横】 178×127mm (2枚パノラマ推奨)', w: 178, h: 127 },
+            'POST_LAND': { name: '【ハガキ 横】 148×100mm', w: 148, h: 100 },
+            '23_LAND': { name: '【3:2 横標準】 150×100mm', w: 150, h: 100 },
+            'A4_LAND': { name: '【A4判 横】 297×210mm (大型額装用)', w: 297, h: 210 }
+        };
+
+        // 公式ポケモンカード物理寸法 (63.0 × 88.0 mm)
+        const POKE_CARD_MM = { w: 63.0, h: 88.0 };
+
+        // 絵師プリセット
+        const ARTIST_PRESETS = {
+            'KANDA': {
+                nameEn: "Shinji Kanda",
+                styleEn: "psychedelic dark fantasy artwork, extremely detailed and obsessive pen and ink linework, fine detail collage texture, swirling energy waves, traditional Japanese ukiyo-e motifs, layered geometric patterns, vibrant high-contrast saturated colors, ominous glowing atmosphere",
+                styleJp: "【神田晃次 5軸再現】線画極致・サイケデリック和風・浮世絵的パターン・コラージュ質感・高彩度ネオン"
+            },
+            'EGAWA': {
+                nameEn: "Akira Egawa",
+                styleEn: "dramatic heroic fantasy illustration, high-definition dynamic brushwork, intense rim lighting, rich chromatic contrast, cinematic depth of field, bold energetic composition",
+                styleJp: "【江川あきら 5軸再現】ドラマチック光彩・厚塗りダイナミックブラシ・鮮烈なリムライト・映画的パース"
+            },
+            'KOMIYA': {
+                nameEn: "Tomokazu Komiya",
+                styleEn: "expressionist naive art style, raw gouache paint strokes, thick impasto texture, quirky folk art motifs, vibrant playful primary colors, hand-painted warmth",
+                styleJp: "【小宮一浩 5軸再現】表現主義・粗いガッシュ絵の具の厚塗り・素朴美・原色使い・手描きの温もり"
+            },
+            'SAITO': {
+                nameEn: "Naoki Saito",
+                styleEn: "vibrant modern anime graphic art, crisp clean cel shading, luminous backlight rim lighting, high-contrast vivid colors, energetic anime illustration style",
+                styleJp: "【さいとうなおき 5軸再現】クリスプなアニメ描線・透明感のある逆光リムライト・華やかな発色"
+            },
+            'SHIBUZOH': {
+                nameEn: "Shibuzoh.",
+                styleEn: "whimsical pop graphic art, smooth flat color planes, cute pattern decorations, bold vector-like outlines, playful charming color harmony",
+                styleJp: "【網島志ぶ 5軸再現】ポップ幾何学パターン・フラットな塗り・ファンシーで温かみのある世界観"
+            }
+        };
+
+        // 境界線結合テーマの英語・日本語定義
+        const RELATION_THEMES = {
+            'CLASH': {
+                en: "dramatic energy confrontation and clash at the center boundary: opposing elemental auras from Card 1 and Card 2 violently collide, forming shockwaves, particle bursts, and an explosive fusion barrier",
+                jp: "【対峙・激突】左カードと右カードのオーラ・技が中央で激しく激突し、衝撃波と光の粒子が飛び散る爆縮境界"
+            },
+            'RESONANCE': {
+                en: "harmonious spiritual resonance: luminous flowing particles and gentle psychic waves from both cards intertwine seamlessly at the center, creating a tranquil unified aura that bridges both worlds",
+                jp: "【共鳴・調和】両カードの波動や光の粒子が中央で優しく交錯・編み込まれ、シームレスに1つの世界観へと昇華"
+            },
+            'COSMIC': {
+                en: "cosmic dimensional rift and celestial convergence: a swirling space rift and nebular bridge at the center connecting the two distinct dimensions into one grand cosmic panorama",
+                jp: "【宇宙・次元歪曲】中央に時空の裂け目（ワームホール）や星雲のブリッジが広がり、異なる2つの次元を雄大に接続"
+            },
+            'YIN_YANG': {
+                en: "dramatic chiaroscuro transition between light and dark: radiant dawn light from Card 1 gradually transitions across the boundary into deep twilight shadows of Card 2 in a smooth painterly gradient",
+                jp: "【明暗・陰陽】左カードのまばゆい光から右カードの深い闇へと、境界線でドラマチックかつ滑らかに移り変わるグラデーション"
+            },
+            'NATURE_CYBER': {
+                en: "fusion of untamed wilderness and futuristic technology: lush organic foliage and roots from Card 1 interweave with high-tech glowing circuitry and metallic structures of Card 2",
+                jp: "【異世界交錯】左の大自然の樹木・水流と、右の近未来サイバー構造体が境界線で違和感なく絡み合い融合"
+            }
+        };
+
+        // アプリケーション状態
+        let appMode = 'single'; // 'single' or 'dual'
+        let cardImage1 = null;  // 単体時、またはデュアル時の左カード
+        let cardImage2 = null;  // デュアル時の右カード
+        let bgImage = null;
+        let previewMode = 'embed'; // 'embed' or 'overlay'
+        let currentCropTarget = 1; // 1 or 2 (クロップ操作対象)
+
+        // クロップ設定（カード1、カード2それぞれ独立）
+        let cropSettings = {
+            1: { top: 12, bottom: 18, left: 3, right: 3 },
+            2: { top: 12, bottom: 18, left: 3, right: 3 }
+        };
+
+        // 絵師設定（カード1、カード2それぞれ独立）
+        let artistSettings = {
+            1: { nameEn: ARTIST_PRESETS['KANDA'].nameEn, styleEn: ARTIST_PRESETS['KANDA'].styleEn, styleJp: ARTIST_PRESETS['KANDA'].styleJp },
+            2: { nameEn: ARTIST_PRESETS['EGAWA'].nameEn, styleEn: ARTIST_PRESETS['EGAWA'].styleEn, styleJp: ARTIST_PRESETS['EGAWA'].styleJp }
+        };
+
+        const prepCanvas = document.getElementById('prep-canvas');
+        const prepCtx = prepCanvas.getContext('2d');
+        const overlayCanvas = document.getElementById('overlay-canvas');
+        const overlayCtx = overlayCanvas.getContext('2d');
+
+        // モード切替（シングル / デュアル）
+        function setAppMode(mode) {
+            appMode = mode;
+            const singleBtn = document.getElementById('mode-single-btn');
+            const dualBtn = document.getElementById('mode-dual-btn');
+            const singleCardInput = document.getElementById('single-card-input-box');
+            const dualCardInput = document.getElementById('dual-card-input-box');
+            const singleArtistBox = document.getElementById('single-artist-box');
+            const dualArtistBox = document.getElementById('dual-artist-box');
+            const dualGapControl = document.getElementById('dual-gap-control');
+            const cropTargetSelector = document.getElementById('crop-target-selector');
+            const candidatesTitle = document.getElementById('candidates-title');
+
+            if (mode === 'single') {
+                singleBtn.className = "px-3 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 text-white transition flex items-center gap-1.5 shadow";
+                dualBtn.className = "px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-white transition flex items-center gap-1.5";
+                singleCardInput.classList.remove('hidden');
+                dualCardInput.classList.add('hidden');
+                singleArtistBox.classList.remove('hidden');
+                dualArtistBox.classList.add('hidden');
+                dualGapControl.classList.add('hidden');
+                cropTargetSelector.classList.add('hidden');
+                candidatesTitle.innerHTML = '<i class="fa-solid fa-layer-group text-amber-400 me-1"></i> 生成結果（3案・縦長2:3）';
+            } else {
+                dualBtn.className = "px-3 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 text-white transition flex items-center gap-1.5 shadow";
+                singleBtn.className = "px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-white transition flex items-center gap-1.5";
+                singleCardInput.classList.add('hidden');
+                dualCardInput.classList.remove('hidden');
+                singleArtistBox.classList.add('hidden');
+                dualArtistBox.classList.remove('hidden');
+                dualGapControl.classList.remove('hidden');
+                cropTargetSelector.classList.remove('hidden');
+                candidatesTitle.innerHTML = '<i class="fa-solid fa-layer-group text-amber-400 me-1"></i> 生成結果（3案・横長3:2パノラマ）';
+            }
+
+            populatePaperPresets();
+            applyPaperPreset();
+            syncCropUI();
+        }
+
+        // 用紙プリセットドロップダウンを動的に更新
+        function populatePaperPresets() {
+            const select = document.getElementById('paper-preset');
+            select.innerHTML = '';
+            const presets = (appMode === 'single') ? PRESETS_SINGLE : PRESETS_DUAL;
+            for (const [key, val] of Object.entries(presets)) {
+                const opt = document.createElement('option');
+                opt.value = key;
+                opt.textContent = `${val.name} (${val.w}mm × ${val.h}mm)`;
+                select.appendChild(opt);
+            }
+        }
+
+        // クロップ対象カードの切替（デュアルモード時）
+        function switchCropTarget(target) {
+            currentCropTarget = target;
+            const btn1 = document.getElementById('crop-target-1');
+            const btn2 = document.getElementById('crop-target-2');
+
+            if (target === 1) {
+                btn1.className = "flex-1 py-1 text-[11px] font-bold rounded bg-amber-500/20 text-amber-300 border border-amber-500/40";
+                btn2.className = "flex-1 py-1 text-[11px] font-medium rounded text-slate-400 hover:text-white";
+            } else {
+                btn2.className = "flex-1 py-1 text-[11px] font-bold rounded bg-purple-500/20 text-purple-300 border border-purple-500/40";
+                btn1.className = "flex-1 py-1 text-[11px] font-medium rounded text-slate-400 hover:text-white";
+            }
+            syncCropUI();
+        }
+
+        function syncCropUI() {
+            const s = cropSettings[currentCropTarget];
+            document.getElementById('crop-top').value = s.top;
+            document.getElementById('crop-bottom').value = s.bottom;
+            document.getElementById('crop-left').value = s.left;
+            document.getElementById('crop-right').value = s.right;
+            document.getElementById('crop-top-val').innerText = `${s.top} %`;
+            document.getElementById('crop-bottom-val').innerText = `${s.bottom} %`;
+        }
+
+        function handleCropInput() {
+            const s = cropSettings[currentCropTarget];
+            s.top = parseInt(document.getElementById('crop-top').value);
+            s.bottom = parseInt(document.getElementById('crop-bottom').value);
+            s.left = parseInt(document.getElementById('crop-left').value);
+            s.right = parseInt(document.getElementById('crop-right').value);
+
+            document.getElementById('crop-top-val').innerText = `${s.top} %`;
+            document.getElementById('crop-bottom-val').innerText = `${s.bottom} %`;
+            updatePrepCanvas();
+        }
+
+        // 絵師プリセット選択
+        function selectArtistPreset(targetNum, isDual = false) {
+            let selectId = 'artist-preset-select';
+            let customBoxId = 'custom-artist-box-1';
+
+            if (appMode === 'dual') {
+                selectId = targetNum === 1 ? 'artist1-preset-select' : 'artist2-preset-select';
+                customBoxId = targetNum === 1 ? 'custom-artist-box-dual-1' : 'custom-artist-box-dual-2';
+            }
+
+            const val = document.getElementById(selectId).value;
+            const customBox = document.getElementById(customBoxId);
+
+            if (val === 'CUSTOM') {
+                customBox.classList.remove('hidden');
+            } else {
+                customBox.classList.add('hidden');
+                const preset = ARTIST_PRESETS[val] || ARTIST_PRESETS['KANDA'];
+                artistSettings[targetNum] = {
+                    nameEn: preset.nameEn,
+                    styleEn: preset.styleEn,
+                    styleJp: preset.styleJp
+                };
+                updatePrepCanvas();
+            }
+        }
+
+        // 用紙プリセット適用（物理ミリ計算）
+        function applyPaperPreset() {
+            const presets = (appMode === 'single') ? PRESETS_SINGLE : PRESETS_DUAL;
+            const key = document.getElementById('paper-preset').value;
+            const paper = presets[key] || (appMode === 'single' ? PRESETS_SINGLE['L2'] : PRESETS_DUAL['L2_LAND']);
+
+            // 物理高さ比率計算
+            const heightRatio = (POKE_CARD_MM.h / paper.h) * 100;
+            document.getElementById('size-ratio').value = heightRatio.toFixed(1);
+            document.getElementById('size-ratio-val').innerText = `${heightRatio.toFixed(1)} %`;
+            document.getElementById('paper-dim-display').innerText = `${paper.w} × ${paper.h} mm`;
+            
+            const aspect = (paper.w / paper.h).toFixed(3);
+            document.getElementById('paper-aspect-display').innerText = `${aspect}:1`;
+            document.getElementById('calc-ratio-display').innerText = `${heightRatio.toFixed(1)} %`;
+            document.getElementById('canvas-info-text').innerText = `ベースキャンバス (${paper.name} ${paper.w}×${paper.h}mm)`;
+
+            updatePrepCanvas();
+            updateOverlayCanvas();
+        }
+
+        function switchTab(tab) {
+            const prepTab = document.getElementById('tab-prep');
+            const previewTab = document.getElementById('tab-preview');
+            const prepBtn = document.getElementById('tab-prep-btn');
+            const prevBtn = document.getElementById('tab-prev-btn');
+
+            if (tab === 'prep') {
+                prepTab.classList.remove('hidden');
+                previewTab.classList.add('hidden');
+                prepBtn.className = "px-3.5 py-1.5 text-xs font-medium rounded-lg bg-indigo-600 text-white transition shadow";
+                prevBtn.className = "px-3.5 py-1.5 text-xs font-medium rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 transition";
+            } else {
+                prepTab.classList.add('hidden');
+                previewTab.classList.remove('hidden');
+                prevBtn.className = "px-3.5 py-1.5 text-xs font-medium rounded-lg bg-indigo-600 text-white transition shadow";
+                prepBtn.className = "px-3.5 py-1.5 text-xs font-medium rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 transition";
+                updateOverlayCanvas();
+            }
+        }
+
+        function setPreviewMode(mode) {
+            previewMode = mode;
+            const embedBtn = document.getElementById('mode-embed-btn');
+            const overlayBtn = document.getElementById('mode-overlay-btn');
+
+            if (mode === 'embed') {
+                embedBtn.className = "py-2 text-xs font-medium rounded-md bg-indigo-600 text-white transition flex items-center justify-center gap-1";
+                overlayBtn.className = "py-2 text-xs font-medium rounded-md text-slate-400 hover:bg-slate-800 transition flex items-center justify-center gap-1";
+            } else {
+                overlayBtn.className = "py-2 text-xs font-medium rounded-md bg-indigo-600 text-white transition flex items-center justify-center gap-1";
+                embedBtn.className = "py-2 text-xs font-medium rounded-md text-slate-400 hover:bg-slate-800 transition flex items-center justify-center gap-1";
+            }
+            updateOverlayCanvas();
+        }
+
+        // カード画像の読み込み
+        function loadCardImage(e, slot) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const img = new Image();
+                img.onload = function() {
+                    if (slot === 1) {
+                        cardImage1 = img;
+                        const status1 = document.getElementById('card1-status');
+                        if (status1) status1.innerHTML = '<span class="text-emerald-400 font-bold">読込済</span>';
+                        showToast('左カード (Card 1) を読み込みました');
+                    } else {
+                        cardImage2 = img;
+                        const status2 = document.getElementById('card2-status');
+                        if (status2) status2.innerHTML = '<span class="text-emerald-400 font-bold">読込済</span>';
+                        showToast('右カード (Card 2) を読み込みました');
+                    }
+                    updatePrepCanvas();
+                    updateOverlayCanvas();
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // 背景画像の読み込み
+        function loadBgImage(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                bgImage = new Image();
+                bgImage.onload = function() {
+                    updateOverlayCanvas();
+                    showToast('AI生成背景を読み込みました');
+                };
+                bgImage.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // ベースキャンバスの描画更新（メインロジック）
+        function updatePrepCanvas() {
+            const presets = (appMode === 'single') ? PRESETS_SINGLE : PRESETS_DUAL;
+            const key = document.getElementById('paper-preset').value;
+            const paper = presets[key] || (appMode === 'single' ? PRESETS_SINGLE['L2'] : PRESETS_DUAL['L2_LAND']);
+
+            const sizeRatio = parseFloat(document.getElementById('size-ratio').value);
+            const yOffset = parseInt(document.getElementById('y-offset').value);
+            const showGuide = document.getElementById('show-cut-guide').checked;
+            const enableCrop = document.getElementById('enable-crop').checked;
+
+            document.getElementById('size-ratio-val').innerText = `${sizeRatio.toFixed(1)} %`;
+            document.getElementById('y-offset-val').innerText = `${yOffset} px`;
+
+            // 高解像度ベース解像度
+            const baseH = 1800;
+            const baseW = Math.round(baseH * (paper.w / paper.h));
+
+            prepCanvas.width = baseW;
+            prepCanvas.height = baseH;
+
+            // 黒背景（アウトペインティングの標準入力色）
+            prepCtx.fillStyle = '#000000';
+            prepCtx.fillRect(0, 0, baseW, baseH);
+
+            if (appMode === 'single') {
+                // ========== シングルカード描画 ==========
+                if (cardImage1) {
+                    drawSingleCard(cardImage1, 1, baseW, baseH, sizeRatio, yOffset, enableCrop, showGuide);
+                } else {
+                    drawEmptyPlaceholder(baseW, baseH, 'カード画像をアップロードしてください');
+                }
+            } else {
+                // ========== デュアルカード（2枚連結）描画 ==========
+                const gapMm = parseFloat(document.getElementById('card-gap').value);
+                document.getElementById('card-gap-val').innerText = `${gapMm.toFixed(1)} mm`;
+
+                if (cardImage1 || cardImage2) {
+                    drawDualCards(baseW, baseH, paper, gapMm, sizeRatio, yOffset, enableCrop, showGuide);
+                } else {
+                    drawEmptyPlaceholder(baseW, baseH, '左カード・右カードをそれぞれアップロードしてください');
+                }
+            }
+
+            updatePromptText(sizeRatio, paper.name);
+        }
+
+        function drawEmptyPlaceholder(w, h, text) {
+            prepCtx.fillStyle = '#111827';
+            prepCtx.fillRect(0, 0, w, h);
+            prepCtx.fillStyle = '#64748b';
+            prepCtx.font = 'bold 36px sans-serif';
+            prepCtx.textAlign = 'center';
+            prepCtx.fillText(text, w / 2, h / 2);
+        }
+
+        // シングルカードのトリミング描画ヘルパー
+        function drawSingleCard(img, slot, baseW, baseH, sizeRatio, yOffset, enableCrop, showGuide) {
+            const crop = cropSettings[slot];
+            const cropTopPct = enableCrop ? crop.top : 0;
+            const cropBottomPct = enableCrop ? crop.bottom : 0;
+            const cropLeftPct = enableCrop ? crop.left : 0;
+            const cropRightPct = enableCrop ? crop.right : 0;
+
+            const fullCardH = baseH * (sizeRatio / 100);
+            const aspect = img.width / img.height;
+            const fullCardW = fullCardH * aspect;
+
+            const fullPosX = (baseW - fullCardW) / 2;
+            const fullPosY = ((baseH - fullCardH) / 2) + yOffset;
+
+            // クロップ座標
+            const sx = img.width * (cropLeftPct / 100);
+            const sy = img.height * (cropTopPct / 100);
+            const sw = img.width * (1 - (cropLeftPct + cropRightPct) / 100);
+            const sh = img.height * (1 - (cropTopPct + cropBottomPct) / 100);
+
+            const dx = fullPosX + (fullCardW * (cropLeftPct / 100));
+            const dy = fullPosY + (fullCardH * (cropTopPct / 100));
+            const dw = fullCardW * (1 - (cropLeftPct + cropRightPct) / 100);
+            const dh = fullCardH * (1 - (cropTopPct + cropBottomPct) / 100);
+
+            prepCtx.drawImage(img, sx, sy, sw, sh, dx, dy, dw, dh);
+
+            if (showGuide) {
+                prepCtx.save();
+                prepCtx.strokeStyle = '#f59e0b';
+                prepCtx.lineWidth = 4;
+                prepCtx.setLineDash([12, 8]);
+                prepCtx.strokeRect(fullPosX, fullPosY, fullCardW, fullCardH);
+
+                prepCtx.fillStyle = '#f59e0b';
+                prepCtx.font = 'bold 22px sans-serif';
+                prepCtx.textAlign = 'center';
+                prepCtx.fillText('実物カード埋め込み窓 (63×88mm)', baseW / 2, fullPosY - 15);
+                prepCtx.restore();
+            }
+        }
+
+        // デュアルカードのミリ精度配置描画
+        function drawDualCards(baseW, baseH, paper, gapMm, sizeRatio, yOffset, enableCrop, showGuide) {
+            // 用紙mmとキャンバスピクセルの変換比率
+            const pxPerMmY = baseH / paper.h;
+            const pxPerMmX = baseW / paper.w;
+
+            const cardH = baseH * (sizeRatio / 100);
+            const cardW = cardH * (POKE_CARD_MM.w / POKE_CARD_MM.h);
+            const gapPx = gapMm * pxPerMmX;
+
+            const centerY = (baseH / 2) + yOffset;
+            const centerX = baseW / 2;
+
+            // 左右カードのX座標（中心に対して対称）
+            const card1X = centerX - (gapPx / 2) - cardW;
+            const card2X = centerX + (gapPx / 2);
+            const cardY = centerY - (cardH / 2);
+
+            // 左カード (Card 1) 描画
+            if (cardImage1) {
+                renderCroppedCard(cardImage1, 1, card1X, cardY, cardW, cardH, enableCrop);
+            } else {
+                drawMissingCardBox(card1X, cardY, cardW, cardH, '左カード未設定');
+            }
+
+            // 右カード (Card 2) 描画
+            if (cardImage2) {
+                renderCroppedCard(cardImage2, 2, card2X, cardY, cardW, cardH, enableCrop);
+            } else {
+                drawMissingCardBox(card2X, cardY, cardW, cardH, '右カード未設定');
+            }
+
+            // ガイド線描画
+            if (showGuide) {
+                prepCtx.save();
+                prepCtx.strokeStyle = '#f59e0b';
+                prepCtx.lineWidth = 4;
+                prepCtx.setLineDash([12, 8]);
+
+                // 2つの穴枠
+                prepCtx.strokeRect(card1X, cardY, cardW, cardH);
+                prepCtx.strokeRect(card2X, cardY, cardW, cardH);
+
+                // 中央仕切り線と注釈
+                prepCtx.fillStyle = '#f59e0b';
+                prepCtx.font = 'bold 20px sans-serif';
+                prepCtx.textAlign = 'center';
+                prepCtx.fillText(`左カード窓`, card1X + (cardW / 2), cardY - 15);
+                prepCtx.fillText(`右カード窓`, card2X + (cardW / 2), cardY - 15);
+                prepCtx.fillText(`中央マット間隔: ${gapMm.toFixed(1)}mm`, centerX, cardY + cardH + 30);
+                prepCtx.restore();
+            }
+        }
+
+        function renderCroppedCard(img, slot, posX, posY, cardW, cardH, enableCrop) {
+            const crop = cropSettings[slot];
+            const cropTopPct = enableCrop ? crop.top : 0;
+            const cropBottomPct = enableCrop ? crop.bottom : 0;
+            const cropLeftPct = enableCrop ? crop.left : 0;
+            const cropRightPct = enableCrop ? crop.right : 0;
+
+            const sx = img.width * (cropLeftPct / 100);
+            const sy = img.height * (cropTopPct / 100);
+            const sw = img.width * (1 - (cropLeftPct + cropRightPct) / 100);
+            const sh = img.height * (1 - (cropTopPct + cropBottomPct) / 100);
+
+            const dx = posX + (cardW * (cropLeftPct / 100));
+            const dy = posY + (cardH * (cropTopPct / 100));
+            const dw = cardW * (1 - (cropLeftPct + cropRightPct) / 100);
+            const dh = cardH * (1 - (cropTopPct + cropBottomPct) / 100);
+
+            prepCtx.drawImage(img, sx, sy, sw, sh, dx, dy, dw, dh);
+        }
+
+        function drawMissingCardBox(x, y, w, h, text) {
+            prepCtx.save();
+            prepCtx.fillStyle = '#1e293b';
+            prepCtx.fillRect(x, y, w, h);
+            prepCtx.strokeStyle = '#475569';
+            prepCtx.lineWidth = 2;
+            prepCtx.strokeRect(x, y, w, h);
+            prepCtx.fillStyle = '#94a3b8';
+            prepCtx.font = 'bold 18px sans-serif';
+            prepCtx.textAlign = 'center';
+            prepCtx.fillText(text, x + (w / 2), y + (h / 2));
+            prepCtx.restore();
+        }
+
+        // プロンプト生成（シングル & デュアル両対応）
+        function updatePromptText(ratio, paperName) {
+            const ratioFormatted = ratio.toFixed(1);
+
+            if (appMode === 'single') {
+                const a1 = artistSettings[1];
+                const promptEn = `[Task: Crop-Cleaned High-Precision Outpainting / Background Expansion]
+The provided input image features a CLEANED, TEXT-FREE central artwork (card borders and text UI removed) placed in the center of a black canvas. Expand this central 2D artwork seamlessly into the surrounding black margin to complete a grand 2:3 vertical landscape.
+
+[CRITICAL OUTPAINTING & ZERO-TEXT RULES]
+
+1. STRICT SCALE AND POSITION LOCK:
+- Keep the central crop-cleaned artwork completely unchanged in shape, scale, and color.
+- Lock its height to EXACTLY 【${ratioFormatted}%】 of the canvas height, centered vertically and horizontally.
+
+2. DIRECTIONAL ENERGY VECTORS & HORROR VACUI DENSITY:
+- Seamlessly extend the momentum, direction, and flow of lines (waterfalls, wave surges, energy bursts, light rays) from the edges of the central artwork directly into the outer canvas.
+- Cover every square millimeter of the expanded canvas with dense micro-pattern collages, intricate pen-hatched linework, and detailed environmental elements.
+
+3. STRICT ABSOLUTE BAN ON TEXT, NUMBERS, AND CARD UI (CRITICAL):
+- ABSOLUTELY ZERO TEXT: The source image contains NO text, and the generated background MUST CONTAIN ZERO TEXT. Do NOT draw any Pokemon names, card titles, Japanese kanji/hiragana, numbers ("30", "10+"), or attack descriptions anywhere.
+- ABSOLUTELY ZERO UI/SYMBOLS: Do NOT draw any Water/Fire/Lightning energy icons, type circles, status symbols, Pikachu stamps, or card frame lines.
+- ABSOLUTELY ZERO DUPLICATE CREATURES: Do NOT draw any new Pokemon, extra limbs, or duplicate creatures in the extended background. Focus 100% on pure environment and world expansion.
+
+4. DEEP ARTIST TECHNIQUE REPLICATION (${a1.nameEn}):
+- Replicate the signature 5-axis artistic techniques of ${a1.nameEn}: ${a1.styleEn}`;
+
+                const promptJp = `【日本語指示・深堀り対訳確認（1枚縦・文字完全排除版）】\n1. 縮尺と位置の固定：中央のテキストカット済みイラストを縦幅【${ratioFormatted}%】に正確に固定して中央配置。\n2. シームレス線とエネルギーベクトルの延長：中央の絵から流れ出る滝線・山肌・波紋をそのまま外側へ直進接続。四隅まで余白なく高密度のマイクロパターン（ホラー・ヴァクイ）で埋め尽くす。\n3. 文字・属性マーク・カードUIの絶対禁止（最重要）：元画像から文字をカットしてあるため、拡張領域にも「ポケモン名」「HP数字」「技テキスト」「属性アイコン」「カード枠線」は1文字・1パーツたりとも絶対に描かないこと。\n4. アーティスト【${a1.nameEn}】の5軸深堀り技法適用：\n${a1.styleJp}`;
+
+                document.getElementById('generated-prompt').innerText = promptEn;
+                document.getElementById('generated-prompt-jp').innerText = promptJp;
+            } else {
+                // ========== デュアル（2枚連結）プロンプト ==========
+                const a1 = artistSettings[1];
+                const a2 = artistSettings[2];
+                const relKey = document.getElementById('dual-relation-select').value;
+                const relation = RELATION_THEMES[relKey] || RELATION_THEMES['CLASH'];
+
+                const promptEn = `[Task: Dual-Card Seamless Panoramic Outpainting & Artistic Style Morphing]
+The provided input image contains TWO distinct crop-cleaned Pokemon card artworks (Card 1 on the left and Card 2 on the right) set within a panoramic black canvas.
+Your task is to seamlessly outpaint both artworks into a breathtaking, unified 3:2 panoramic background where the two different worlds and artistic styles harmoniously connect across the central boundary.
+
+[DUAL-ARTIST STYLES & SEAMLESS BOUNDARY INTEGRATION]
+
+1. LEFT REGION (Card 1 - Left Artwork Extension):
+- Artist Style: Masterfully replicate the distinctive style of ${a1.nameEn}:
+  ${a1.styleEn}
+- Continue the colors, textures, and aura of the left artwork expanding outwards towards the left and upper/lower peripheries.
+
+2. RIGHT REGION (Card 2 - Right Artwork Extension):
+- Artist Style: Masterfully replicate the distinctive style of ${a2.nameEn}:
+  ${a2.styleEn}
+- Continue the colors, textures, and aura of the right artwork expanding outwards towards the right and upper/lower peripheries.
+
+3. CENTER BOUNDARY - WORLD CONNECTION & SEAMLESS TRANSITION:
+- Core Relation Theme: ${relation.en}
+- Seamless Style Morphing: In the center gap between the two cards, create a breathtaking, seamless transition where the brushstrokes, color palettes, and energy flows of ${a1.nameEn} and ${a2.nameEn} organically merge without any jarring seams or artificial borders.
+- Unified Horizon & Atmosphere: Ensure the background lighting, depth of field, and atmosphere across the entire width of the canvas feel like a single cohesive epic scene.
+
+[CRITICAL ABSOLUTE ZERO-TEXT & ZERO-UI RULES]
+- ABSOLUTELY ZERO TEXT / ZERO CHARACTERS: Strictly NO text, Pokemon names, HP digits, ability names, Japanese/English letters anywhere in the generated background.
+- ABSOLUTELY ZERO CARD FRAMES / NO DIVIDERS: Do NOT draw any rectangular borders, card sleeves, division lines, or energy symbols in the background. Expand as pure cinematic art.
+- PRESERVE SOURCE ARTWORK: Do NOT alter, overwrite, or distort the two source card artworks already embedded in the canvas.`;
+
+                const promptJp = `【日本語指示・深堀り対訳確認（2枚パノラマ・絵師個別融合版）】\n1. 左領域（Card 1拡張）: 絵師【${a1.nameEn}】の5軸技法（${a1.styleJp}）を忠実に再現して左側と上下へシームレス拡張。\n2. 右領域（Card 2拡張）: 絵師【${a2.nameEn}】の5軸技法（${a2.styleJp}）を忠実に再現して右側と上下へシームレス拡張。\n3. 中央境界線の世界観連結（最重要）:\n   - 演出テーマ: ${relation.jp}\n   - 画風の有機的融合（Style Morphing）: 2枚の異なるタッチ・色調を中央の間隔エリアで滑らかにブレンドし、境界線に違和感のない1枚の雄大なパノラマとして結合。\n4. 文字・カード枠線の絶対禁止（ゼロテキスト）: カード名、技テキスト、数字、属性アイコン、カードの枠線は一切描かず、純粋な背景アートとして描き切ること。`;
+
+                document.getElementById('generated-prompt').innerText = promptEn;
+                document.getElementById('generated-prompt-jp').innerText = promptJp;
+            }
+        }
+
+        // 重ね合わせプレビューキャンバス更新
+        function updateOverlayCanvas() {
+            const presets = (appMode === 'single') ? PRESETS_SINGLE : PRESETS_DUAL;
+            const key = document.getElementById('paper-preset').value;
+            const paper = presets[key] || (appMode === 'single' ? PRESETS_SINGLE['L2'] : PRESETS_DUAL['L2_LAND']);
+
+            const sizeRatio = parseFloat(document.getElementById('size-ratio').value);
+            const yOffset = parseInt(document.getElementById('y-offset').value);
+            const opacity = parseInt(document.getElementById('card-opacity').value) / 100;
+            const fitX = parseInt(document.getElementById('fit-x').value);
+            const fitY = parseInt(document.getElementById('fit-y').value);
+
+            document.getElementById('opacity-val').innerText = `${Math.round(opacity * 100)} %`;
+
+            const baseH = 1800;
+            const baseW = Math.round(baseH * (paper.w / paper.h));
+
+            overlayCanvas.width = baseW;
+            overlayCanvas.height = baseH;
+
+            overlayCtx.clearRect(0, 0, baseW, baseH);
+
+            if (bgImage) {
+                overlayCtx.drawImage(bgImage, 0, 0, baseW, baseH);
+            } else {
+                overlayCtx.fillStyle = '#1e293b';
+                overlayCtx.fillRect(0, 0, baseW, baseH);
+                overlayCtx.fillStyle = '#94a3b8';
+                overlayCtx.font = '30px sans-serif';
+                overlayCtx.textAlign = 'center';
+                overlayCtx.fillText('AI生成背景画像をアップロードまたは生成してください', baseW / 2, baseH / 2);
+            }
+
+            if (appMode === 'single') {
+                // シングルモード重ね合わせ
+                const cardH = baseH * (sizeRatio / 100);
+                const cardW = cardH * (POKE_CARD_MM.w / POKE_CARD_MM.h);
+                const posX = ((baseW - cardW) / 2) + fitX;
+                const posY = (((baseH - cardH) / 2) + yOffset) + fitY;
+
+                renderOverlayHoleOrCard(cardImage1, posX, posY, cardW, cardH, opacity, '実物カード埋め込み窓');
+            } else {
+                // デュアルモード重ね合わせ
+                const pxPerMmX = baseW / paper.w;
+                const gapMm = parseFloat(document.getElementById('card-gap').value);
+                const gapPx = gapMm * pxPerMmX;
+
+                const cardH = baseH * (sizeRatio / 100);
+                const cardW = cardH * (POKE_CARD_MM.w / POKE_CARD_MM.h);
+                const centerY = (baseH / 2) + yOffset + fitY;
+                const centerX = (baseW / 2) + fitX;
+
+                const card1X = centerX - (gapPx / 2) - cardW;
+                const card2X = centerX + (gapPx / 2);
+                const cardY = centerY - (cardH / 2);
+
+                renderOverlayHoleOrCard(cardImage1, card1X, cardY, cardW, cardH, opacity, '左カード埋め込み窓');
+                renderOverlayHoleOrCard(cardImage2, card2X, cardY, cardW, cardH, opacity, '右カード埋め込み窓');
+            }
+        }
+
+        function renderOverlayHoleOrCard(img, posX, posY, cardW, cardH, opacity, label) {
+            if (previewMode === 'embed') {
+                overlayCtx.save();
+                overlayCtx.clearRect(posX, posY, cardW, cardH);
+                
+                overlayCtx.strokeStyle = '#f59e0b';
+                overlayCtx.lineWidth = 4;
+                overlayCtx.setLineDash([10, 6]);
+                overlayCtx.strokeRect(posX, posY, cardW, cardH);
+
+                if (img) {
+                    overlayCtx.globalAlpha = 1.0;
+                    overlayCtx.drawImage(img, posX, posY, cardW, cardH);
+                } else {
+                    overlayCtx.fillStyle = 'rgba(15, 23, 42, 0.7)';
+                    overlayCtx.fillRect(posX, posY, cardW, cardH);
+                    overlayCtx.fillStyle = '#f59e0b';
+                    overlayCtx.font = 'bold 20px sans-serif';
+                    overlayCtx.textAlign = 'center';
+                    overlayCtx.fillText(label, posX + (cardW / 2), posY + (cardH / 2));
+                }
+                overlayCtx.restore();
+            } else {
+                if (img) {
+                    overlayCtx.save();
+                    overlayCtx.globalAlpha = opacity;
+                    overlayCtx.drawImage(img, posX, posY, cardW, cardH);
+                    
+                    overlayCtx.strokeStyle = '#38bdf8';
+                    overlayCtx.lineWidth = 3;
+                    overlayCtx.strokeRect(posX, posY, cardW, cardH);
+                    overlayCtx.restore();
+                }
+            }
+        }
+
+        // Gemini 5軸深堀り検索（カスタム絵師用）
+        async function fetchArtistStyle(slot, isDual = false) {
+            let inputId = 'artist-input-1';
+            let statusId = 'artist-status-1';
+
+            if (appMode === 'dual') {
+                inputId = slot === 1 ? 'artist-input-dual-1' : 'artist-input-dual-2';
+            }
+
+            const artistNameInput = document.getElementById(inputId).value.trim();
+            if (!artistNameInput) {
+                alert('アーティスト名を入力してください。');
+                return;
+            }
+
+            const status = document.getElementById(statusId);
+            if (status) status.classList.remove('hidden');
+
+            const apiKey = "";
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+
+            const systemPrompt = "You are an expert art analyst. Analyze the specified illustrator and provide a deep 5-axis breakdown of their visual techniques.";
+            const userQuery = `Analyze illustrator "${artistNameInput}". Return JSON: 1. "artistNameEn" (string), 2. "styleEn" (string), 3. "styleJp" (string).`;
+
+            const payload = {
+                contents: [{ parts: [{ text: userQuery }] }],
+                tools: [{ "google_search": {} }],
+                systemInstruction: { parts: [{ text: systemPrompt }] },
+                generationConfig: {
+                    responseMimeType: "application/json",
+                    responseSchema: {
+                        type: "OBJECT",
+                        properties: {
+                            artistNameEn: { type: "STRING" },
+                            styleEn: { type: "STRING" },
+                            styleJp: { type: "STRING" }
+                        },
+                        required: ["artistNameEn", "styleEn", "styleJp"]
+                    }
+                }
+            };
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    const text = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+                    if (text) {
+                        const data = JSON.parse(text);
+                        artistSettings[slot] = {
+                            nameEn: data.artistNameEn || artistNameInput,
+                            styleEn: data.styleEn || "distinctive line art and rich color scheme",
+                            styleJp: data.styleJp || "独自の筆致、特徴的な線画"
+                        };
+                        updatePrepCanvas();
+                        showToast(`「${artistSettings[slot].nameEn}」の5軸技法を反映しました！`);
+                    }
+                }
+            } catch (err) {
+                console.error("Artist fetch failed:", err);
+            } finally {
+                if (status) status.classList.add('hidden');
+            }
+        }
+
+        // プロンプトコピー
+        function copyPrompt() {
+            const promptText = document.getElementById('generated-prompt').innerText;
+            const textarea = document.createElement('textarea');
+            textarea.value = promptText;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+            showToast('プロンプトをコピーしました！');
+        }
+
+        // AI入力用ベース画像保存モーダル
+        function downloadPrepImage() {
+            try {
+                const showGuide = document.getElementById('show-cut-guide').checked;
+                document.getElementById('show-cut-guide').checked = false;
+                updatePrepCanvas();
+
+                const dataUrl = prepCanvas.toDataURL('image/jpeg', 0.95);
+
+                const modalImg = document.getElementById('modal-img');
+                const modalLink = document.getElementById('modal-download-link');
+                const modal = document.getElementById('image-modal');
+                
+                modalImg.src = dataUrl;
+                modalLink.href = dataUrl;
+                modalLink.download = `poke_frame_base_${Date.now()}.jpg`;
+
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+
+                document.getElementById('show-cut-guide').checked = showGuide;
+                updatePrepCanvas();
+
+                showToast('ベース画像を表示しました（長押しで保存可能）');
+            } catch (err) {
+                console.error("Image export failed:", err);
+                alert("画像の書き出し中にエラーが発生しました。");
+            }
+        }
+
+        function closeImageModal() {
+            const modal = document.getElementById('image-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        // Nano Banana による自動生成
+        async function generateAIBackgrounds() {
+            if (appMode === 'single' && !cardImage1) {
+                alert('先にカード画像を読み込んでください。');
+                return;
+            }
+            if (appMode === 'dual' && !cardImage1 && !cardImage2) {
+                alert('先にカード画像を読み込んでください。');
+                return;
+            }
+
+            const selectedModel = document.getElementById('ai-model-select').value;
+            const modelLabel = selectedModel === 'gemini-3.1-flash-image' ? 'Nano Banana Flash' : 'Nano Banana Lite';
+
+            const genBtn = document.getElementById('generate-ai-btn');
+            const loadingBox = document.getElementById('ai-loading');
+            const loadingText = document.getElementById('ai-loading-text');
+            const progressBar = document.getElementById('ai-progress-bar');
+            const candidatesContainer = document.getElementById('ai-candidates-container');
+            const candidatesGrid = document.getElementById('ai-candidates-grid');
+
+            genBtn.disabled = true;
+            genBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            loadingBox.classList.remove('hidden');
+            candidatesContainer.classList.add('hidden');
+            candidatesGrid.innerHTML = '';
+            progressBar.style.width = '0%';
+
+            // ガイド線を隠してベース画像を抽出
+            const showGuide = document.getElementById('show-cut-guide').checked;
+            document.getElementById('show-cut-guide').checked = false;
+            updatePrepCanvas();
+
+            const base64Data = prepCanvas.toDataURL('image/jpeg', 0.9).split(',')[1];
+
+            document.getElementById('show-cut-guide').checked = showGuide;
+            updatePrepCanvas();
+
+            const promptText = document.getElementById('generated-prompt').innerText;
+            const apiKey = "";
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:generateContent?key=${apiKey}`;
+
+            // モードに応じた生成アスペクト比（シングルは2:3、デュアルは3:2または4:3）
+            const targetAspect = (appMode === 'single') ? "2:3" : "3:2";
+
+            const payload = {
+                contents: [{
+                    role: 'user',
+                    parts: [
+                        { text: promptText },
+                        {
+                            inlineData: {
+                                mimeType: 'image/jpeg',
+                                data: base64Data
+                            }
+                        }
+                    ]
+                }],
+                generationConfig: {
+                    responseModalities: ['IMAGE'],
+                    imageConfig: { aspectRatio: targetAspect }
+                }
+            };
+
+            const candidates = [];
+            const total = 3;
+
+            for (let i = 0; i < total; i++) {
+                loadingText.innerText = `${modelLabel}で背景生成中... (${i + 1}/${total})`;
+                progressBar.style.width = `${((i) / total) * 100}%`;
+
+                try {
+                    const imgUrl = await fetchImageWithRetry(apiUrl, payload);
+                    candidates.push(imgUrl);
+                } catch (err) {
+                    console.error(`Candidate ${i+1} failed`, err);
+                }
+            }
+
+            progressBar.style.width = '100%';
+            loadingBox.classList.add('hidden');
+            genBtn.disabled = false;
+            genBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+
+            if (candidates.length === 0) {
+                alert('画像の生成に失敗しました。');
+                return;
+            }
+
+            candidatesGrid.innerHTML = '';
+            const aspectClass = (appMode === 'single') ? 'aspect-[2/3]' : 'aspect-[3/2]';
+
+            candidates.forEach((url, idx) => {
+                const cardEl = document.createElement('div');
+                cardEl.className = `relative group cursor-pointer border-2 border-slate-700 hover:border-amber-400 rounded-xl overflow-hidden transition shadow-lg ${aspectClass} bg-slate-950 flex flex-col justify-center items-center`;
+                cardEl.innerHTML = `
+                    <img src="${url}" class="w-full h-full object-cover">
+                    <span class="absolute top-1.5 left-1.5 bg-slate-900/85 backdrop-blur text-[10px] font-bold text-amber-300 px-2 py-0.5 rounded-md border border-amber-500/30 font-mono shadow">案 ${idx + 1}</span>
+                `;
+                cardEl.onclick = () => selectCandidate(url, cardEl);
+                candidatesGrid.appendChild(cardEl);
+            });
+
+            candidatesContainer.classList.remove('hidden');
+            showToast(`${modelLabel}で3案の背景を生成しました！`);
+
+            if (candidates.length > 0) {
+                selectCandidate(candidates[0], candidatesGrid.children[0]);
+            }
+        }
+
+        async function fetchImageWithRetry(apiUrl, payload, retries = 3) {
+            for (let attempt = 0; attempt < retries; attempt++) {
+                try {
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    if (response.ok) {
+                        const result = await response.json();
+                        const part = result?.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
+                        if (part?.inlineData?.data) {
+                            return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
+                        }
+                    }
+                } catch (e) {
+                    console.warn(`Attempt ${attempt + 1} failed`, e);
+                }
+                await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
+            }
+            throw new Error('API Request failed');
+        }
+
+        function selectCandidate(url, element) {
+            const grid = document.getElementById('ai-candidates-grid');
+            Array.from(grid.children).forEach(child => {
+                child.classList.remove('border-amber-400', 'ring-2', 'ring-amber-400/50');
+                child.classList.add('border-slate-700');
+            });
+
+            if (element) {
+                element.classList.remove('border-slate-700');
+                element.classList.add('border-amber-400', 'ring-2', 'ring-amber-400/50');
+            }
+
+            bgImage = new Image();
+            bgImage.onload = function() {
+                switchTab('preview');
+                updateOverlayCanvas();
+                showToast('背景画像を適用し、重ね合わせプレビューへ移動しました');
+            };
+            bgImage.src = url;
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-msg').innerText = msg;
+            toast.classList.remove('opacity-0');
+            toast.classList.add('opacity-100');
+            setTimeout(() => {
+                toast.classList.remove('opacity-100');
+                toast.classList.add('opacity-0');
+            }, 2500);
+        }
+
+        // 初期起動時セットアップ
+        window.onload = function() {
+            setAppMode('dual'); // デュアルパノラマモードを初期表示（ユーザーのご要望に合わせてデフォルト化）
+        };
+    </script>
+</body>
+</html>
