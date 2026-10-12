@@ -46,7 +46,7 @@
                 <div>
                     <h1 class="font-bold text-lg leading-tight flex items-center gap-2">
                         ポケカ額装背景拡張 スタジオ
-                        <span class="text-[10px] bg-emerald-500/20 text-emerald-300 font-normal px-2 py-0.5 rounded-full border border-emerald-500/30">v1.2 Pollinations.ai対応</span>
+                        <span class="text-[10px] bg-emerald-500/20 text-emerald-300 font-normal px-2 py-0.5 rounded-full border border-emerald-500/30">v1.3 Web版Gemini連携対応</span>
                         <span class="text-[10px] bg-indigo-500/20 text-indigo-300 font-normal px-2 py-0.5 rounded-full border border-indigo-500/30">L2横 2枚パノラマ</span>
                     </h1>
                     <p class="text-xs text-slate-400">文字・枠線を物理カットしてAI拡張。2枚の異なる絵師の世界観をシームレスに結合</p>
@@ -375,13 +375,67 @@
                         </details>
                     </div>
 
-                    <!-- Gemini APIキー設定カード (LocalStorage永続化) -->
-                    <div id="api-key-card" class="p-3 bg-gradient-to-r from-slate-950 to-indigo-950/40 rounded-xl border border-indigo-500/30 space-y-2">
+                    <!-- Web版Gemini (Nano Banana) 高精度アウトペインティング連携カード -->
+                    <div class="p-3.5 bg-gradient-to-br from-indigo-950/70 via-slate-900 to-purple-950/60 rounded-xl border border-indigo-500/40 space-y-3 shadow-xl">
                         <div class="flex items-center justify-between">
-                            <label for="gemini-api-key-input" class="text-xs font-bold text-indigo-300 flex items-center gap-1.5">
-                                <i class="fa-solid fa-key text-amber-400"></i> Gemini APIキー
+                            <span class="text-xs font-bold text-amber-300 flex items-center gap-1.5">
+                                <i class="fa-solid fa-wand-magic-sparkles text-amber-400"></i> Web版 Gemini で高精度アウトペインティング
+                            </span>
+                            <span class="text-[10px] bg-emerald-500/20 text-emerald-300 font-medium px-2 py-0.5 rounded-full border border-emerald-500/30">
+                                完全無料・最高画質
+                            </span>
+                        </div>
+
+                        <p class="text-[11px] text-slate-300 leading-relaxed">
+                            Web版 Gemini（スマホアプリ / <code class="text-indigo-300 font-mono">gemini.google.com</code>）は画像入出力（Nano Banana）が完全無料で動作します。<br>
+                            以下の手順で、枠外をシームレスに拡張した最高精度の背景イラストを作成できます。
+                        </p>
+
+                        <!-- 3ステップ手順ガイド -->
+                        <div class="space-y-1.5 p-2.5 bg-slate-950/80 rounded-lg border border-slate-800 text-[11px]">
+                            <div class="flex items-start gap-2 text-slate-300">
+                                <span class="w-4 h-4 rounded-full bg-indigo-600 text-white font-bold text-[10px] flex items-center justify-center shrink-0 mt-0.5">1</span>
+                                <span>下のボタンから<strong>「AI入力用ベース画像」</strong>を保存（スマホは長押し）</span>
+                            </div>
+                            <div class="flex items-start gap-2 text-slate-300">
+                                <span class="w-4 h-4 rounded-full bg-indigo-600 text-white font-bold text-[10px] flex items-center justify-center shrink-0 mt-0.5">2</span>
+                                <span><strong>「プロンプトをコピー」</strong>をタップして最適化指示文を取得</span>
+                            </div>
+                            <div class="flex items-start gap-2 text-slate-300">
+                                <span class="w-4 h-4 rounded-full bg-indigo-600 text-white font-bold text-[10px] flex items-center justify-center shrink-0 mt-0.5">3</span>
+                                <span><strong>「Geminiを開く」</strong>でGeminiにベース画像を添付＋プロンプトを貼り付けて送信</span>
+                            </div>
+                        </div>
+
+                        <!-- アクションボタン群 -->
+                        <div class="space-y-2 pt-1">
+                            <!-- ワンタップ一括実行ボタン -->
+                            <button onclick="launchGeminiOutpaintFlow()" class="w-full py-3 bg-gradient-to-r from-amber-500 via-indigo-600 to-purple-600 hover:from-amber-400 hover:via-indigo-500 hover:to-purple-500 font-bold text-xs text-white rounded-xl shadow-lg transition flex items-center justify-center gap-2 cursor-pointer">
+                                <i class="fa-solid fa-bolt text-amber-300"></i> 画像保存＆プロンプトコピーしてGeminiを開く
+                            </button>
+
+                            <div class="grid grid-cols-2 gap-2">
+                                <button onclick="downloadPrepImage()" class="py-2.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 font-semibold text-[11px] text-white rounded-xl transition flex items-center justify-center gap-1.5 cursor-pointer">
+                                    <i class="fa-solid fa-download text-indigo-400"></i> ベース画像保存
+                                </button>
+                                <button onclick="copyPrompt()" class="py-2.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 font-semibold text-[11px] text-white rounded-xl transition flex items-center justify-center gap-1.5 cursor-pointer">
+                                    <i class="fa-solid fa-copy text-amber-400"></i> プロンプトコピー
+                                </button>
+                            </div>
+
+                            <a href="https://gemini.google.com/" target="_blank" rel="noopener noreferrer" class="w-full py-2 bg-slate-900/90 hover:bg-slate-800 border border-indigo-900/50 text-[11px] font-medium text-indigo-300 hover:text-indigo-200 rounded-xl transition flex items-center justify-center gap-1.5 shadow">
+                                <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i> Web版 Gemini (gemini.google.com) を直接開く
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Gemini APIキー設定カード (絵師5軸解析用・任意) -->
+                    <div id="api-key-card" class="p-3 bg-slate-950/60 rounded-xl border border-slate-800 space-y-2">
+                        <div class="flex items-center justify-between">
+                            <label for="gemini-api-key-input" class="text-[11px] font-semibold text-slate-400 flex items-center gap-1.5">
+                                <i class="fa-solid fa-key text-slate-500"></i> Gemini APIキー <span class="text-[10px] text-slate-500 font-normal">（絵師5軸解析のみで使用 / 任意）</span>
                             </label>
-                            <span id="api-key-status-badge" class="text-[10px] px-2 py-0.5 rounded-full font-mono bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                            <span id="api-key-status-badge" class="text-[10px] px-2 py-0.5 rounded-full font-mono bg-slate-800 text-slate-400 border border-slate-700">
                                 未設定
                             </span>
                         </div>
@@ -400,43 +454,6 @@
                             <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" class="text-amber-400 hover:text-amber-300 underline flex items-center gap-1">
                                 無料キー取得 <i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i>
                             </a>
-                        </div>
-                    </div>
-
-                    <!-- AI生成 ＆ ダウンロードボタン -->
-                    <div class="space-y-2 pt-1">
-                        <button onclick="downloadPrepImage()" class="w-full py-2.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 font-bold text-xs text-white rounded-xl transition flex items-center justify-center gap-2 cursor-pointer">
-                            <i class="fa-solid fa-download text-sm text-indigo-400"></i> AI入力用ベース画像を保存 / 表示
-                        </button>
-
-                        <div>
-                            <label class="text-[11px] font-semibold text-amber-300 block mb-1 flex items-center gap-1">
-                                <i class="fa-solid fa-microchip"></i> 画像生成AI <span class="text-[9px] text-emerald-400 font-normal ml-1">（Pollinations.ai / APIキー不要）</span>
-                            </label>
-                            <select id="ai-model-select" class="w-full bg-slate-950 border border-amber-500/40 rounded-lg p-2 text-xs text-amber-200 font-medium">
-                                <option value="flux" selected>【Flux】高品質モデル [推奨]</option>
-                                <option value="turbo">【Turbo】高速モデル</option>
-                            </select>
-                        </div>
-
-                        <button id="generate-ai-btn" onclick="generateAIBackgrounds()" class="w-full py-3 bg-gradient-to-r from-emerald-500 via-indigo-600 to-purple-600 hover:from-emerald-400 hover:via-indigo-500 hover:to-purple-500 font-bold text-xs text-white rounded-xl shadow-lg transition flex items-center justify-center gap-2 cursor-pointer">
-                            <i class="fa-solid fa-wand-magic-sparkles text-sm"></i> AIで背景イラストを3案自動生成する (Pollinations.ai)
-                        </button>
-
-                        <div id="ai-loading" class="hidden p-3 bg-slate-950 rounded-xl border border-indigo-900/60 text-center space-y-1.5">
-                            <div class="inline-block animate-spin text-amber-400 text-lg"><i class="fa-solid fa-circle-notch"></i></div>
-                            <p id="ai-loading-text" class="text-xs text-indigo-200 font-medium">Pollinations.aiで生成中... (0/3)</p>
-                            <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                                <div id="ai-progress-bar" class="bg-gradient-to-r from-amber-400 to-indigo-500 h-full w-0 transition-all duration-300"></div>
-                            </div>
-                        </div>
-
-                        <div id="ai-candidates-container" class="hidden space-y-2 pt-2 border-t border-slate-800">
-                            <span class="text-[11px] font-semibold text-slate-300 flex items-center justify-between">
-                                <span id="candidates-title"><i class="fa-solid fa-layer-group text-amber-400 me-1"></i> 生成結果（3案）</span>
-                                <span class="text-[10px] text-slate-400 font-normal">タップで選択・自動適用</span>
-                            </span>
-                            <div id="ai-candidates-grid" class="grid grid-cols-3 gap-2.5"></div>
                         </div>
                     </div>
                 </div>
@@ -546,13 +563,18 @@
                 <img id="modal-img" src="" class="w-full h-auto max-h-[50vh] object-contain block select-all">
             </div>
 
-            <div class="flex flex-col sm:flex-row gap-2 w-full pt-1">
-                <a id="modal-download-link" download="poke_frame_base.jpg" href="#" class="flex-1 py-3 bg-indigo-600 hover:bg-indigo-500 font-medium text-xs text-white rounded-xl text-center transition flex items-center justify-center gap-1.5 shadow-lg">
-                    <i class="fa-solid fa-file-arrow-down text-sm"></i> PC用ファイル直接保存
+            <div class="flex flex-col gap-2 w-full pt-1">
+                <a id="modal-gemini-link" href="https://gemini.google.com/" target="_blank" rel="noopener noreferrer" onclick="copyPrompt()" class="w-full py-2.5 bg-gradient-to-r from-amber-500 via-indigo-600 to-purple-600 hover:opacity-90 font-bold text-xs text-white rounded-xl text-center transition flex items-center justify-center gap-2 shadow-lg">
+                    <i class="fa-solid fa-copy text-amber-300"></i> プロンプトをコピーして Web版 Gemini を開く
                 </a>
-                <button onclick="closeImageModal()" class="px-5 py-3 bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 font-medium rounded-xl transition">
-                    閉じる
-                </button>
+                <div class="flex flex-col sm:flex-row gap-2 w-full">
+                    <a id="modal-download-link" download="poke_frame_base.jpg" href="#" class="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-500 font-medium text-xs text-white rounded-xl text-center transition flex items-center justify-center gap-1.5 shadow">
+                        <i class="fa-solid fa-file-arrow-down text-sm"></i> PC用ファイル直接保存
+                    </a>
+                    <button onclick="closeImageModal()" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 font-medium rounded-xl transition">
+                        閉じる
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -1358,8 +1380,8 @@ Your task is to seamlessly outpaint both artworks into a breathtaking, unified 3
             modal.classList.remove('flex');
         }
 
-        // Pollinations.ai による自動生成
-        async function generateAIBackgrounds() {
+        // Web版 Gemini (Nano Banana) 連携ワンストップフロー
+        function launchGeminiOutpaintFlow() {
             if (appMode === 'single' && !cardImage1) {
                 alert('先にカード画像を読み込んでください。');
                 return;
@@ -1369,103 +1391,18 @@ Your task is to seamlessly outpaint both artworks into a breathtaking, unified 3
                 return;
             }
 
-            const selectedModel = document.getElementById('ai-model-select').value;
-            const modelLabel = selectedModel === 'flux' ? 'Flux' : 'Turbo';
+            // 1. プロンプトをクリップボードにコピー
+            copyPrompt();
 
-            const genBtn = document.getElementById('generate-ai-btn');
-            const loadingBox = document.getElementById('ai-loading');
-            const loadingText = document.getElementById('ai-loading-text');
-            const progressBar = document.getElementById('ai-progress-bar');
-            const candidatesContainer = document.getElementById('ai-candidates-container');
-            const candidatesGrid = document.getElementById('ai-candidates-grid');
+            // 2. ベース画像保存モーダルを表示
+            downloadPrepImage();
 
-            genBtn.disabled = true;
-            genBtn.classList.add('opacity-50', 'cursor-not-allowed');
-            loadingBox.classList.remove('hidden');
-            candidatesContainer.classList.add('hidden');
-            candidatesGrid.innerHTML = '';
-            progressBar.style.width = '0%';
+            // 3. Web版 Gemini を別タブで開く
+            setTimeout(() => {
+                window.open('https://gemini.google.com/', '_blank');
+            }, 600);
 
-            const promptText = document.getElementById('generated-prompt').innerText;
-
-            // モードに応じた生成サイズ（シングルは2:3ポートレート、デュアルは3:2ランドスケープ）
-            let imgWidth, imgHeight;
-            if (appMode === 'single') {
-                imgWidth = 768;
-                imgHeight = 1152; // 2:3比率
-            } else {
-                imgWidth = 1152;
-                imgHeight = 768;  // 3:2比率
-            }
-
-            const candidates = [];
-            const total = 3;
-            let lastErrorMsg = '';
-
-            for (let i = 0; i < total; i++) {
-                loadingText.innerText = `Pollinations.ai (${modelLabel}) で背景生成中... (${i + 1}/${total})`;
-                progressBar.style.width = `${((i) / total) * 100}%`;
-
-                try {
-                    // ランダムseedで多様性を確保
-                    const seed = Math.floor(Math.random() * 999999);
-                    const encodedPrompt = encodeURIComponent(promptText);
-                    const imgUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${imgWidth}&height=${imgHeight}&model=${selectedModel}&seed=${seed}&nologo=true&enhance=true`;
-
-                    // 画像の読み込みを待つ
-                    await new Promise((resolve, reject) => {
-                        const img = new Image();
-                        img.crossOrigin = 'anonymous';
-                        img.onload = () => {
-                            candidates.push(imgUrl);
-                            resolve();
-                        };
-                        img.onerror = () => {
-                            lastErrorMsg = `画像 ${i + 1} の生成/読み込みに失敗しました`;
-                            reject(new Error(lastErrorMsg));
-                        };
-                        // タイムアウト（60秒）
-                        setTimeout(() => {
-                            lastErrorMsg = `画像 ${i + 1} の生成がタイムアウトしました（60秒）`;
-                            reject(new Error(lastErrorMsg));
-                        }, 60000);
-                        img.src = imgUrl;
-                    });
-                } catch (err) {
-                    console.error(`Candidate ${i+1} failed`, err);
-                }
-            }
-
-            progressBar.style.width = '100%';
-            loadingBox.classList.add('hidden');
-            genBtn.disabled = false;
-            genBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-
-            if (candidates.length === 0) {
-                alert(`画像の生成に失敗しました。\n\n【エラー詳細】\n${lastErrorMsg || 'Pollinations.aiからの応答がありませんでした'}\n\n※ネットワーク接続を確認してください。`);
-                return;
-            }
-
-            candidatesGrid.innerHTML = '';
-            const aspectClass = (appMode === 'single') ? 'aspect-[2/3]' : 'aspect-[3/2]';
-
-            candidates.forEach((url, idx) => {
-                const cardEl = document.createElement('div');
-                cardEl.className = `relative group cursor-pointer border-2 border-slate-700 hover:border-amber-400 rounded-xl overflow-hidden transition shadow-lg ${aspectClass} bg-slate-950 flex flex-col justify-center items-center`;
-                cardEl.innerHTML = `
-                    <img src="${url}" class="w-full h-full object-cover" crossorigin="anonymous">
-                    <span class="absolute top-1.5 left-1.5 bg-slate-900/85 backdrop-blur text-[10px] font-bold text-amber-300 px-2 py-0.5 rounded-md border border-amber-500/30 font-mono shadow">案 ${idx + 1}</span>
-                `;
-                cardEl.onclick = () => selectCandidate(url, cardEl);
-                candidatesGrid.appendChild(cardEl);
-            });
-
-            candidatesContainer.classList.remove('hidden');
-            showToast(`Pollinations.ai (${modelLabel}) で${candidates.length}案の背景を生成しました！`);
-
-            if (candidates.length > 0) {
-                selectCandidate(candidates[0], candidatesGrid.children[0]);
-            }
+            showToast('プロンプトをコピーし、Web版 Gemini を開きました！');
         }
 
         // Gemini API用リトライ関数（画像生成はPollinations.aiに移行済み。テキストAPI用に残存）
